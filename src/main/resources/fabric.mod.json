@@ -1,0 +1,43 @@
+{
+	"schemaVersion": 1,
+	"id": "aiex",
+	"version": "${version}",
+	"name": "aiex",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/aiex/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.stuff_stuffs.aiex.common.internal.AiExCommon"
+		],
+		"client": [
+			"io.github.stuff_stuffs.aiex.client.internal.AiExClient"
+		]
+	},
+	"mixins": [
+		"aiex.mixins.json",
+		{
+			"config": "aiex.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.14.22",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
+	},
+	"custom": {
+		"loom:injected_interfaces": {
+			"net/minecraft/class_1297": ["io/github/stuff_stuffs/aiex/common/api/entity_reference/EntityReferencable"]
+		}
+	}
+}

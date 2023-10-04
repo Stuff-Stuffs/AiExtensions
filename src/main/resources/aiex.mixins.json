@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "io.github.stuff_stuffs.aiex.common.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "MixinEntity",
+    "MixinLivingEntity",
+    "MixinMobEntity",
+    "MixinServer",
+    "MixinServerWorld",
+    "MixinWorldSavePath"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
