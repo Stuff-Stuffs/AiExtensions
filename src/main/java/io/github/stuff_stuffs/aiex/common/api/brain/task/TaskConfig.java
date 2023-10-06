@@ -36,11 +36,11 @@ public interface TaskConfig<T> {
     }
 
     interface Factory<T, R, P> {
-        @Nullable Task<R, ? super T> create(P parameters);
+        @Nullable Task<R, T> create(P parameters);
 
-        default Factory<T, R, P> fallbackTo(final Factory<? super T, R, ? super P> factory) {
+        default Factory<T, R, P> fallbackTo(final Factory<T, R, ? super P> factory) {
             return parameters -> {
-                final Task<R, ? super T> task = create(parameters);
+                final Task<R, T> task = create(parameters);
                 if (task != null) {
                     return task;
                 }
@@ -48,9 +48,9 @@ public interface TaskConfig<T> {
             };
         }
 
-        default Factory<T, R, P> fallbackFrom(final Factory<? super T, R, ? super P> factory) {
+        default Factory<T, R, P> fallbackFrom(final Factory<T, R, ? super P> factory) {
             return parameters -> {
-                final Task<R, ? super T> task = factory.create(parameters);
+                final Task<R, T> task = factory.create(parameters);
                 if (task != null) {
                     return task;
                 }

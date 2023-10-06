@@ -8,17 +8,20 @@ import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleSlotStorage;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.item.FoodComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("UnstableApiUsage")
 public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
@@ -88,6 +91,17 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
             world.playSound(null, getX(), getY(), getZ(), SoundEvents.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 0.5F, world.random.nextFloat() * 0.1F + 0.9F);
         }
         return super.eatFood(world, stack);
+    }
+
+    @Nullable
+    @Override
+    protected SoundEvent getHurtSound(final DamageSource source) {
+        return super.getHurtSound(source);
+    }
+
+    @Override
+    protected void takeShieldHit(LivingEntity attacker) {
+        super.takeShieldHit(attacker);
     }
 
     protected NpcHungerManager createHungerManager(final World world) {

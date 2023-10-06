@@ -64,7 +64,7 @@ public class MemoryEntryImpl<T> implements MemoryEntry<T> {
     }
 
     private static <T> Optional<MemoryEntryImpl<T>> read(final NbtCompound nbt, final Memory<T> type, final AiBrainView brain) {
-        final Optional<T> dataRes = type.codec().parse(NbtOps.INSTANCE, nbt.get("data")).result();
+        final Optional<T> dataRes = type.codec().flatMap(codec -> codec.parse(NbtOps.INSTANCE, nbt.get("data")).result());
         if (dataRes.isEmpty()) {
             return Optional.empty();
         }
@@ -72,7 +72,7 @@ public class MemoryEntryImpl<T> implements MemoryEntry<T> {
     }
 
     public void writeNbt(final NbtCompound nbt) {
-        final Optional<NbtElement> valRes = type.codec().encodeStart(NbtOps.INSTANCE, val).result();
+        final Optional<NbtElement> valRes = type.codec().flatMap(codec -> codec.encodeStart(NbtOps.INSTANCE, val).result());
         if (valRes.isPresent()) {
             nbt.putString("type", Memory.REGISTRY.getId(type).toString());
             nbt.put("data", valRes.get());

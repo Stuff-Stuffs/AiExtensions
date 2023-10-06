@@ -7,13 +7,14 @@ import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 
+import java.util.Optional;
 import java.util.Set;
 
 public interface Memory<T> {
     RegistryKey<Registry<Memory<?>>> REGISTRY_KEY = RegistryKey.ofRegistry(AiExCommon.id("memories"));
     Registry<Memory<?>> REGISTRY = FabricRegistryBuilder.createSimple(REGISTRY_KEY).buildAndRegister();
 
-    Codec<T> codec();
+    Optional<Codec<T>> codec();
 
     Set<Memory<?>> listeningTo();
 

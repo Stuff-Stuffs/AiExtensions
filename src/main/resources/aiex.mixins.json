@@ -3,6 +3,7 @@
   "package": "io.github.stuff_stuffs.aiex.common.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "MixinDamageSources",
     "MixinEntity",
     "MixinLivingEntity",
     "MixinMobEntity",

@@ -3,25 +3,27 @@ package io.github.stuff_stuffs.aiex.common.api.brain.memory;
 import com.mojang.serialization.Codec;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public final class BasicMemory<T> implements Memory<T> {
-    private final Codec<T> codec;
+    private final @Nullable Codec<T> codec;
     private final Map<Memory<?>, Updater<T, ?>> updateMap;
     private final Map<Memory<?>, Updater<T, ?>> optionalUpdateMap;
 
-    private BasicMemory(final Codec<T> codec, final Map<Memory<?>, Updater<T, ?>> updateMap, final Map<Memory<?>, Updater<T, ?>> optionalUpdateMap) {
+    private BasicMemory(final @Nullable Codec<T> codec, final Map<Memory<?>, Updater<T, ?>> updateMap, final Map<Memory<?>, Updater<T, ?>> optionalUpdateMap) {
         this.codec = codec;
         this.updateMap = Map.copyOf(updateMap);
         this.optionalUpdateMap = Map.copyOf(optionalUpdateMap);
     }
 
     @Override
-    public Codec<T> codec() {
-        return codec;
+    public Optional<Codec<T>> codec() {
+        return Optional.ofNullable(codec);
     }
 
     @Override
@@ -56,12 +58,16 @@ public final class BasicMemory<T> implements Memory<T> {
         return new Builder<>(codec);
     }
 
+    public static <T> Builder<T> ephemeralBuilder() {
+        return new Builder<>(null);
+    }
+
     public static final class Builder<T> {
-        private final Codec<T> codec;
+        private final @Nullable Codec<T> codec;
         private final Map<Memory<?>, Updater<T, ?>> updateMap;
         private final Map<Memory<?>, Updater<T, ?>> optionalUpdateMap;
 
-        private Builder(final Codec<T> codec) {
+        private Builder(final @Nullable Codec<T> codec) {
             this.codec = codec;
             updateMap = new Reference2ObjectOpenHashMap<>();
             optionalUpdateMap = new Reference2ObjectOpenHashMap<>();

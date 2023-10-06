@@ -2,16 +2,21 @@ package io.github.stuff_stuffs.aiex_test.common.entity;
 
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrain;
+import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
+import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
+import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.target.TargetingBrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
-import io.github.stuff_stuffs.aiex_test.common.basic.BasicBrainNodes;
 import io.github.stuff_stuffs.aiex_test.common.basic.TaskKeys;
 import io.github.stuff_stuffs.aiex_test.common.basic.WalkTask;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -19,11 +24,14 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Arm;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class TestEntity extends AbstractNpcEntity {
     private static final TrackedData<Boolean> SLIM_DATA = DataTracker.registerData(TestEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
@@ -31,9 +39,26 @@ public class TestEntity extends AbstractNpcEntity {
 
     protected TestEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
-        final BrainNode<TestEntity, Optional<Vec3d>, Unit> nearestPlayer = BasicBrainNodes.nearestPlayer();
-        final BrainNode<TestEntity, TaskTerminalBrainNode.Result<WalkTask.Result>, Vec3d> resettingWalk = BasicBrainNodes.<TestEntity>walk(TaskKeys.WALK_TASK_KEY, 4.0).resetOnResult(TaskTerminalBrainNode.<WalkTask.Result>successInnerPredicate(r -> r == WalkTask.Result.CONTINUE).negate());
-        brain = AiBrain.create(nearestPlayer.ifThen(Optional::isPresent, resettingWalk.adaptArg(Optional::get), BrainNodes.constant(new TaskTerminalBrainNode.Failure<>())).discardResult(), BrainConfig.builder().build(), MemoryConfig.builder().build(this), TaskConfig.builder().build(this));
+        final BrainNode<TestEntity, TaskTerminalBrainNode.Result<WalkTask.Result>, Entity> followNode = new TaskTerminalBrainNode<>(TaskKeys.WALK_TASK_KEY, (BiFunction<Entity, BrainContext<TestEntity>, WalkTask.Parameters>) (entity, context) -> {
+            context.brain().memories().get(Memories.WALK_TARGET).set(Optional.of(entity.getBlockPos()));
+            return new WalkTask.Parameters() {
+                @Override
+                public Vec3d target() {
+                    return entity.getPos();
+                }
+
+                @Override
+                public double maxError() {
+                    return 2.5;
+                }
+            };
+        }).resetOnResult(f -> f instanceof TaskTerminalBrainNode.Success<WalkTask.Result> success && success.value() != WalkTask.Result.CONTINUE).resetOnContext((context, entity) -> {
+            final Optional<BlockPos> pos = context.brain().memories().get(Memories.WALK_TARGET).get();
+            return !entity.isAlive() || (pos.isPresent() && entity.getPos().squaredDistanceTo(Vec3d.ofBottomCenter(pos.get())) > 2.5 * 2.5);
+        });
+        final BrainNode<TestEntity, Optional<Entity>, Unit> target = TargetingBrainNodes.eventTarget(AiBrainEventTypes.DAMAGED, (context, arg, stream) -> stream.map(event -> event.sourceUuid().or(event::attackerUuid).map(uuid -> context.world().getEntity(uuid))).filter(Optional::isPresent).findFirst().flatMap(Function.identity()), AiBrainEvent.SECOND * 10, false, true);
+        final BrainNode<TestEntity, Unit, Unit> root = target.ifThen((context, entity) -> entity.isPresent(), followNode.<Optional<Entity>>adaptArg(Optional::get).discardResult(), BrainNodes.empty());
+        brain = AiBrain.create(root, BrainConfig.builder().build(), MemoryConfig.builder().build(this), TaskConfig.<TestEntity>builder().build(this));
         updateSlim();
     }
 

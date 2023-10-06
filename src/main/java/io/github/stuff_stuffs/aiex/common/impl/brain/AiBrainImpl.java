@@ -14,6 +14,8 @@ import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
+import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
+import io.github.stuff_stuffs.aiex.common.api.entity.AiFakePlayer;
 import io.github.stuff_stuffs.aiex.common.impl.brain.memory.MemoryEntryImpl;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.PriorityQueue;
@@ -32,16 +34,17 @@ import java.util.*;
 import java.util.stream.Stream;
 
 public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Events {
-    protected final BrainNode<T, Unit, Unit> rootNode;
+    private final BrainNode<T, Unit, Unit> rootNode;
     private final BrainConfig config;
     private final EventHandler handler;
     private final MemoriesImpl memories;
-    private final TaskConfig<? super T> taskConfig;
+    private final TaskConfig<T> taskConfig;
+    private AiFakePlayer fakePlayer;
     private long age;
     private long randomifier;
     private boolean init = false;
 
-    public AiBrainImpl(final BrainNode<T, Unit, Unit> node, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<? super T> taskConfig) {
+    public AiBrainImpl(final BrainNode<T, Unit, Unit> node, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig) {
         rootNode = node;
         this.config = config;
         handler = new EventHandler();
@@ -82,6 +85,18 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
         age++;
         randomifier = 0;
         handler.tick(age);
+        if (memories.has(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_ATTACK_COOLDOWN)) {
+            final MemoryEntry<Integer> entry = memories.get(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_ATTACK_COOLDOWN);
+            if (entry.get() > 0) {
+                entry.set(entry.get() - 1);
+            }
+        }
+        if (memories.has(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_USE_COOLDOWN)) {
+            final MemoryEntry<Integer> entry = memories.get(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_USE_COOLDOWN);
+            if (entry.get() > 0) {
+                entry.set(entry.get() - 1);
+            }
+        }
         final BrainContext<T> brainContext = new BrainContext<>() {
             @Override
             public T entity() {
@@ -99,15 +114,31 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
             }
 
             @Override
-            public <TR, P> Optional<Task<TR, ? super T>> createTask(final TaskKey<TR, P> key, final P parameters) {
+            public <TR, P> Optional<Task<TR, T>> createTask(final TaskKey<TR, P> key, final P parameters) {
                 if (!taskConfig.hasFactory(key)) {
                     return Optional.empty();
                 }
-                final Task<TR, ? super T> task = taskConfig.getFactory(key).create(parameters);
+                final Task<TR, T> task = taskConfig.getFactory(key).create(parameters);
                 return Optional.ofNullable(task);
+            }
+
+            @Override
+            public AiFakePlayer playerDelegate() {
+                if (fakePlayer == null) {
+                    throw new NullPointerException();
+                }
+                return fakePlayer;
+            }
+
+            @Override
+            public boolean hasPlayerDelegate() {
+                return fakePlayer != null;
             }
         };
         if (!init) {
+            if (entity instanceof AbstractNpcEntity e) {
+                fakePlayer = new AiFakePlayer((ServerWorld) entity.getEntityWorld(), e);
+            }
             rootNode.init(brainContext);
             init = true;
         }
@@ -169,8 +200,13 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     }
 
     @Override
-    public void submit(final AiBrainEvent event) {
+    public void remember(final AiBrainEvent event) {
         handler.submit(event, age);
+    }
+
+    @Override
+    public boolean forget(final AiBrainEvent event) {
+        return handler.forget(event);
     }
 
     @Override
@@ -189,6 +225,24 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     @Override
     public Stream<AiBrainEvent> streamQuery(final long since) {
         return handler.query(since).stream().map(entry -> entry.event);
+    }
+
+    @Override
+    public List<AiBrainEvent> queryReversed(final long since) {
+        final SortedSet<EventEntry> query = handler.queryReversed(since);
+        if (query.isEmpty()) {
+            return Collections.emptyList();
+        }
+        final List<AiBrainEvent> list = new ArrayList<>(query.size());
+        for (final EventEntry entry : query) {
+            list.add(entry.event);
+        }
+        return list;
+    }
+
+    @Override
+    public Stream<AiBrainEvent> streamQueryReversed(final long since) {
+        return handler.queryReversed(since).stream().map(entry -> entry.event);
     }
 
     @Override
@@ -211,15 +265,39 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
         return handler.query(type, since).stream().map(entry -> (T0) entry.event);
     }
 
+    @Override
+    public <T0 extends AiBrainEvent> List<T0> queryReversed(final AiBrainEventType<T0> type, final long since) {
+        final SortedSet<EventEntry> query = handler.queryReversed(type, since);
+        if (query.isEmpty()) {
+            return Collections.emptyList();
+        }
+        final List<T0> list = new ArrayList<>(query.size());
+        for (final EventEntry entry : query) {
+            //noinspection unchecked
+            list.add((T0) entry.event);
+        }
+        return list;
+    }
+
+    @Override
+    public <T0 extends AiBrainEvent> Stream<T0> streamQueryReversed(final AiBrainEventType<T0> type, final long since) {
+        //noinspection unchecked
+        return handler.query(type, since).stream().map(entry -> (T0) entry.event);
+    }
+
     protected static class EventHandler {
         private final PriorityQueue<EventEntry> expirationQueue;
         private final SortedSet<EventEntry> allEvents;
+        private final SortedSet<EventEntry> allEventsReversed;
         private final Map<AiBrainEventType<?>, SortedSet<EventEntry>> eventsByType;
+        private final Map<AiBrainEventType<?>, SortedSet<EventEntry>> eventsByTypeReversed;
 
         private EventHandler() {
             expirationQueue = new ObjectHeapPriorityQueue<>(EventEntry.EXPIRATION_COMPARATOR);
             allEvents = new ObjectAVLTreeSet<>(EventEntry.TIMESTAMP_COMPARATOR);
+            allEventsReversed = new ObjectAVLTreeSet<>(EventEntry.TIMESTAMP_COMPARATOR.reversed());
             eventsByType = new Reference2ReferenceOpenHashMap<>();
+            eventsByTypeReversed = new Reference2ReferenceOpenHashMap<>();
         }
 
         public void submit(final AiBrainEvent event, final long timestamp) {
@@ -230,19 +308,29 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
         public void submit(final EventEntry entry) {
             expirationQueue.enqueue(entry);
             allEvents.add(entry);
+            allEventsReversed.add(entry);
             eventsByType.computeIfAbsent(entry.event.type(), i -> new ObjectAVLTreeSet<>(EventEntry.TIMESTAMP_COMPARATOR)).add(entry);
+            eventsByTypeReversed.computeIfAbsent(entry.event.type(), i -> new ObjectAVLTreeSet<>(EventEntry.TIMESTAMP_COMPARATOR.reversed())).add(entry);
         }
 
         public void tick(final long timestamp) {
             while (expirationQueue.first().expiration < timestamp) {
                 final EventEntry entry = expirationQueue.dequeue();
                 allEvents.remove(entry);
+                allEventsReversed.remove(entry);
                 final AiBrainEventType<?> type = entry.event.type();
                 final SortedSet<EventEntry> events = eventsByType.get(type);
                 if (events != null) {
                     events.remove(entry);
                     if (events.isEmpty()) {
                         eventsByType.remove(type);
+                    }
+                }
+                final SortedSet<EventEntry> eventsRev = eventsByTypeReversed.get(type);
+                if (eventsRev != null) {
+                    eventsRev.remove(entry);
+                    if (eventsRev.isEmpty()) {
+                        eventsByTypeReversed.remove(type);
                     }
                 }
             }
@@ -264,11 +352,56 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
             final EventEntry entry = new EventEntry(null, since, 0);
             return entries.tailSet(entry);
         }
+
+        public SortedSet<EventEntry> queryReversed(final long since) {
+            if (allEventsReversed.isEmpty()) {
+                return Collections.emptySortedSet();
+            }
+            final EventEntry entry = new EventEntry(null, since - 1, 0);
+            return allEventsReversed.headSet(entry);
+        }
+
+        public SortedSet<EventEntry> queryReversed(final AiBrainEventType<?> type, final long since) {
+            final SortedSet<EventEntry> entries = eventsByTypeReversed.get(type);
+            if (entries == null || entries.isEmpty()) {
+                return Collections.emptySortedSet();
+            }
+            final EventEntry entry = new EventEntry(null, since - 1, 0);
+            return entries.headSet(entry);
+        }
+
+        public boolean forget(final AiBrainEvent event) {
+            final EventEntry entry = new EventEntry(event, 0, 0);
+            if (allEvents.remove(entry)) {
+                allEventsReversed.remove(entry);
+                eventsByType.getOrDefault(event.type(), Collections.emptySortedSet()).remove(entry);
+                eventsByTypeReversed.getOrDefault(event.type(), Collections.emptySortedSet()).remove(entry);
+                return true;
+            }
+            return false;
+        }
     }
 
     private record EventEntry(AiBrainEvent event, long timestamp, long expiration) {
         public static final Comparator<EventEntry> TIMESTAMP_COMPARATOR = Comparator.comparingLong(EventEntry::timestamp);
         public static final Comparator<EventEntry> EXPIRATION_COMPARATOR = Comparator.comparingLong(EventEntry::expiration);
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof EventEntry entry)) {
+                return false;
+            }
+
+            return event.equals(entry.event);
+        }
+
+        @Override
+        public int hashCode() {
+            return event.hashCode();
+        }
     }
 
     private static final class MemoriesImpl implements Memories {

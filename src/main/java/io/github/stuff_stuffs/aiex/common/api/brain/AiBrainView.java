@@ -21,15 +21,25 @@ public interface AiBrainView {
     Memories memories();
 
     interface Events {
-        void submit(AiBrainEvent event);
+        void remember(AiBrainEvent event);
+
+        boolean forget(AiBrainEvent event);
 
         List<AiBrainEvent> query(long since);
 
         Stream<AiBrainEvent> streamQuery(long since);
 
+        List<AiBrainEvent> queryReversed(long since);
+
+        Stream<AiBrainEvent> streamQueryReversed(long since);
+
         <T extends AiBrainEvent> List<T> query(AiBrainEventType<T> type, long since);
 
         <T extends AiBrainEvent> Stream<T> streamQuery(AiBrainEventType<T> type, long since);
+
+        <T extends AiBrainEvent> List<T> queryReversed(AiBrainEventType<T> type, long since);
+
+        <T extends AiBrainEvent> Stream<T> streamQueryReversed(AiBrainEventType<T> type, long since);
     }
 
     interface Memories {

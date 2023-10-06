@@ -1,9 +1,8 @@
 package io.github.stuff_stuffs.aiex_test.common.basic;
 
-import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 import net.minecraft.util.math.Vec3d;
 
-public interface WalkTask<C> extends Task<WalkTask.Result, C> {
+public interface WalkTask {
     enum Result {
         CONTINUE,
         DONE,

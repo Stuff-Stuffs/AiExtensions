@@ -16,7 +16,7 @@ public interface AiBrain<T> extends AiBrainView {
 
     void readNbt(NbtCompound nbt);
 
-    static <T extends Entity> AiBrain<T> create(final BrainNode<T, Unit, Unit> root, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<? super T> taskConfig) {
+    static <T extends Entity> AiBrain<T> create(final BrainNode<T, Unit, Unit> root, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig) {
         return new AiBrainImpl<>(root, config, memoryConfig, taskConfig);
     }
 }

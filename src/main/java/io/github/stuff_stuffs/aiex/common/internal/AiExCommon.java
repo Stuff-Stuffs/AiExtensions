@@ -2,7 +2,7 @@ package io.github.stuff_stuffs.aiex.common.internal;
 
 import io.github.stuff_stuffs.aiex.common.api.AiExGameRules;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories;
 import io.github.stuff_stuffs.aiex.common.api.entity_reference.EntityReferenceDataType;
 import io.github.stuff_stuffs.aiex.common.mixin.MixinWorldSavePath;
 import net.fabricmc.api.ModInitializer;
@@ -21,8 +21,8 @@ public class AiExCommon implements ModInitializer {
     public void onInitialize() {
         AiBrainEventTypes.init();
         AiExGameRules.init();
+        Memories.init();
         EntityReferenceDataType.REGISTRY.getCodec();
-        Memory.REGISTRY.getCodec();
         EntityReferenceDataTypeCache.clear();
         ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> entity.aiex$getAndUpdateReference());
     }

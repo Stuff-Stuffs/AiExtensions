@@ -2,15 +2,12 @@ package io.github.stuff_stuffs.aiex.common.api.entity;
 
 import com.mojang.serialization.Dynamic;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
-import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.DamagedBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.ObservedEntityBrainEvent;
 import io.github.stuff_stuffs.aiex.common.internal.entity.DummyBrain;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.*;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.MobEntity;
@@ -27,6 +24,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity {
+    public static final int VISION_POLLING_RATE = 15;
+
     protected AbstractAiMobEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
     }
@@ -42,7 +41,7 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
     protected void applyDamage(final DamageSource source, final float amount) {
         super.applyDamage(source, amount);
         if (getEntityWorld() instanceof ServerWorld) {
-            aiex$getBrain().events().submit(DamagedBrainEvent.create(source, amount));
+            aiex$getBrain().events().remember(DamagedBrainEvent.create(source, amount));
         }
     }
 
@@ -56,7 +55,11 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
             final double radians = Math.cos(Math.toRadians(fieldOfView()) * 0.5F);
             final Vec3d vector = getRotationVector();
             final AiBrainView brainView = aiex$getBrain();
-            final List<ObservedEntityBrainEvent> events = brainView.events().query(AiBrainEventTypes.OBSERVED_ENTITY, AiBrainEvent.SECOND * 45);
+            final long brainAge = brainView.age();
+            final long oldest = brainAge - ObservedEntityBrainEvent.LIFETIME;
+            final long youngest = brainAge - VISION_POLLING_RATE;
+            final AiBrainView.Events brainEvents = brainView.events();
+            final List<ObservedEntityBrainEvent> events = brainEvents.query(AiBrainEventTypes.OBSERVED_ENTITY, youngest);
             final Set<UUID> ids = new ObjectOpenHashSet<>(events.size());
             for (final ObservedEntityBrainEvent event : events) {
                 ids.add(event.targetUuid());
@@ -67,7 +70,8 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
                 }
                 final Vec3d delta = entity.getPos().subtract(getPos()).normalize();
                 if (vector.dotProduct(delta) >= radians && canSee(entity)) {
-                    brainView.events().submit(ObservedEntityBrainEvent.create(entity));
+                    brainEvents.streamQuery(AiBrainEventTypes.OBSERVED_ENTITY, oldest).takeWhile(event -> event.timestamp() <= youngest).forEach(brainEvents::forget);
+                    brainEvents.remember(ObservedEntityBrainEvent.create(entity, brainAge));
                 }
             }
         }
@@ -92,6 +96,51 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
         if (nbt.contains("aiexBrain", NbtElement.COMPOUND_TYPE)) {
             deserializeBrain(nbt.getCompound("aiexBrain"));
         }
+    }
+
+    @Override
+    protected boolean isImmobile() {
+        return super.isImmobile();
+    }
+
+    @Override
+    protected boolean shouldSwimInFluids() {
+        return super.shouldSwimInFluids();
+    }
+
+    @Override
+    public void jump() {
+        super.jump();
+    }
+
+    @Override
+    protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
+        return super.getActiveEyeHeight(pose, dimensions);
+    }
+
+    @Override
+    protected void updatePotionVisibility() {
+        super.updatePotionVisibility();
+    }
+
+    @Override
+    protected float getSoundVolume() {
+        return super.getSoundVolume();
+    }
+
+    @Override
+    protected void attackLivingEntity(LivingEntity target) {
+        super.attackLivingEntity(target);
+    }
+
+    @Override
+    protected void setFlag(int index, boolean value) {
+        super.setFlag(index, value);
+    }
+
+    @Override
+    protected boolean getFlag(int index) {
+        return super.getFlag(index);
     }
 
     protected float fieldOfView() {

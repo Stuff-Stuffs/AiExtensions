@@ -55,6 +55,7 @@ public class IfBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
         } else {
             if (prev == TriState.DEFAULT) {
                 res = predicate.test(context, arg);
+                prev = TriState.of(res);
             } else {
                 res = prev.get();
             }
