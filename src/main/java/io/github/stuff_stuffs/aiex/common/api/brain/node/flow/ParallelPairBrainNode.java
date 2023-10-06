@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 
@@ -26,9 +27,9 @@ public class ParallelPairBrainNode<C, R0, R1, R2, FC> implements BrainNode<C, R0
     }
 
     @Override
-    public void deinit() {
-        first.deinit();
-        second.deinit();
+    public void deinit(AiBrainView brain) {
+        first.deinit(brain);
+        second.deinit(brain);
     }
 
     public interface ResultMerger<C, R0, R1, R2> {

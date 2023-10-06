@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.basic.target;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 
@@ -36,7 +37,7 @@ public abstract class AbstractSingleTargetingBrainNode<C, R, FC> implements Brai
     }
 
     @Override
-    public void deinit() {
+    public void deinit(AiBrainView brain) {
         cached = Optional.empty();
         cacheInit = false;
     }

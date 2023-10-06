@@ -1,6 +1,7 @@
 package io.github.stuff_stuffs.aiex_test.common.basic;
 
 import com.mojang.datafixers.util.Unit;
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
@@ -30,7 +31,7 @@ public final class BasicBrainNodes {
             }
 
             @Override
-            public void deinit() {
+            public void deinit(AiBrainView brain) {
 
             }
         };

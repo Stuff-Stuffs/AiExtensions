@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,6 +40,9 @@ public class SelectorPairTask<R, C, P0, P1> implements Task<Optional<R>, C> {
                 } else {
                     task = context.createTask(falseKey, falseParameterFactory.get());
                 }
+                if (current != null) {
+                    current.stop(context.brain());
+                }
                 current = task.orElse(null);
             }
             state = s;
@@ -47,5 +51,12 @@ public class SelectorPairTask<R, C, P0, P1> implements Task<Optional<R>, C> {
             return Optional.empty();
         }
         return Optional.of(current.run(context));
+    }
+
+    @Override
+    public void stop(final AiBrainView context) {
+        if (current != null) {
+            current.stop(context);
+        }
     }
 }

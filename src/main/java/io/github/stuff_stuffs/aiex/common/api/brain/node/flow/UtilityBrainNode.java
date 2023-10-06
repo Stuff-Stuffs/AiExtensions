@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 
@@ -47,7 +48,7 @@ public class UtilityBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
             final int selected = select(context);
             if (selected != this.selected) {
                 if (this.selected != -1) {
-                    entries.get(this.selected).node.deinit();
+                    entries.get(this.selected).node.deinit(context.brain());
                 }
                 entries.get(selected).node.init(context);
             }
@@ -57,9 +58,9 @@ public class UtilityBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
     }
 
     @Override
-    public void deinit() {
+    public void deinit(AiBrainView brain) {
         if (selected != -1) {
-            entries.get(selected).node.deinit();
+            entries.get(selected).node.deinit(brain);
             selected = -1;
         }
     }

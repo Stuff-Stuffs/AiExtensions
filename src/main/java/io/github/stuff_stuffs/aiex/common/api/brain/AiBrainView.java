@@ -5,6 +5,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventType;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryEntry;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -19,6 +20,8 @@ public interface AiBrainView {
     Events events();
 
     Memories memories();
+
+    BrainResources resources();
 
     interface Events {
         void remember(AiBrainEvent event);

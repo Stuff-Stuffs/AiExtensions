@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 
 import java.util.Optional;
@@ -25,5 +26,10 @@ public class WhileTask<R, C> implements Task<Optional<R>, C> {
             }
         }
         return Optional.empty();
+    }
+
+    @Override
+    public void stop(final AiBrainView context) {
+        task.stop(context);
     }
 }

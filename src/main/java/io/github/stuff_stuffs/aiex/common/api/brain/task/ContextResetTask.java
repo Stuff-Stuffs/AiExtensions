@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,11 +23,21 @@ public class ContextResetTask<R, C, P> implements Task<Optional<R>, C> {
     @Override
     public Optional<R> run(final BrainContext<C> context) {
         if (current == null || reset.test(context)) {
+            if (current != null) {
+                current.stop(context.brain());
+            }
             current = context.createTask(key, parameterFactory.apply(context)).orElse(null);
         }
         if (current == null) {
             return Optional.empty();
         }
         return Optional.of(current.run(context));
+    }
+
+    @Override
+    public void stop(final AiBrainView context) {
+        if (current != null) {
+            current.stop(context);
+        }
     }
 }

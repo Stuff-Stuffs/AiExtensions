@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 
@@ -28,8 +29,8 @@ public class FallthroughChainedBrainNode<C, R0, FC0, FC1, R1> implements BrainNo
     }
 
     @Override
-    public void deinit() {
-        first.deinit();
-        second.deinit();
+    public void deinit(AiBrainView brain) {
+        first.deinit(brain);
+        second.deinit(brain);
     }
 }

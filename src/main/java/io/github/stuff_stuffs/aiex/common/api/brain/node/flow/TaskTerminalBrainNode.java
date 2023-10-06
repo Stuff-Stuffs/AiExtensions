@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
@@ -44,7 +45,10 @@ public class TaskTerminalBrainNode<C, R, P, FC> implements BrainNode<C, TaskTerm
     }
 
     @Override
-    public void deinit() {
+    public void deinit(final AiBrainView brain) {
+        if (task != null) {
+            task.stop(brain);
+        }
         task = null;
         error = false;
     }

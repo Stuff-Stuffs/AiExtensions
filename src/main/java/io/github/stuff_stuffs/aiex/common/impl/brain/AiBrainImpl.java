@@ -11,18 +11,23 @@ import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryEntry;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiFakePlayer;
 import io.github.stuff_stuffs.aiex.common.impl.brain.memory.MemoryEntryImpl;
+import io.github.stuff_stuffs.aiex.common.impl.brain.resource.AbstractBrainResourcesImpl;
+import io.github.stuff_stuffs.aiex.common.impl.brain.resource.BrainResourcesImpl;
+import io.github.stuff_stuffs.aiex.common.impl.brain.resource.DebugBrainResourcesImpl;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -39,6 +44,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     private final EventHandler handler;
     private final MemoriesImpl memories;
     private final TaskConfig<T> taskConfig;
+    private final AbstractBrainResourcesImpl resources;
     private AiFakePlayer fakePlayer;
     private long age;
     private long randomifier;
@@ -50,6 +56,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
         handler = new EventHandler();
         memories = new MemoriesImpl(memoryConfig, this);
         this.taskConfig = taskConfig;
+        resources = (FabricLoader.getInstance().isDevelopmentEnvironment() ? new DebugBrainResourcesImpl() : new BrainResourcesImpl());
     }
 
     @Override
@@ -75,6 +82,11 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     @Override
     public Memories memories() {
         return memories;
+    }
+
+    @Override
+    public BrainResources resources() {
+        return resources;
     }
 
     @Override
@@ -172,7 +184,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     @Override
     public void readNbt(final NbtCompound nbt) {
         if (init) {
-            rootNode.deinit();
+            rootNode.deinit(this);
             init = false;
         }
         age = nbt.getLong("age");

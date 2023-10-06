@@ -33,7 +33,7 @@ public final class BrainNodes {
             }
 
             @Override
-            public void deinit() {
+            public void deinit(AiBrainView brain) {
 
             }
         };
@@ -98,9 +98,9 @@ public final class BrainNodes {
             }
 
             @Override
-            public void deinit() {
-                start.deinit();
-                map.deinit();
+            public void deinit(AiBrainView brain) {
+                start.deinit(brain);
+                map.deinit(brain);
             }
         };
     }

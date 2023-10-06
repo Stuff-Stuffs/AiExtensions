@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 
@@ -23,14 +24,14 @@ public class ResettingBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
     public R tick(final BrainContext<C> context, final FC arg) {
         final R res = child.tick(context, arg);
         if (resetPredicate.test(res)) {
-            child.deinit();
+            child.deinit(context.brain());
             child.init(context);
         }
         return res;
     }
 
     @Override
-    public void deinit() {
-        child.deinit();
+    public void deinit(AiBrainView brain) {
+        child.deinit(brain);
     }
 }
