@@ -12,10 +12,9 @@ import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.target.TargetingBrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
-import io.github.stuff_stuffs.aiex_test.common.basic.TaskKeys;
-import io.github.stuff_stuffs.aiex_test.common.basic.WalkTask;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.data.DataTracker;
@@ -39,9 +38,9 @@ public class TestEntity extends AbstractNpcEntity {
 
     protected TestEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
-        final BrainNode<TestEntity, TaskTerminalBrainNode.Result<WalkTask.Result>, Entity> followNode = new TaskTerminalBrainNode<>(TaskKeys.WALK_TASK_KEY, (BiFunction<Entity, BrainContext<TestEntity>, WalkTask.Parameters>) (entity, context) -> {
+        final BrainNode<TestEntity, TaskTerminalBrainNode.Result<BasicTasks.Walk.Result>, Entity> followNode = new TaskTerminalBrainNode<>(BasicTasks.Walk.KEY, (BiFunction<Entity, BrainContext<TestEntity>, BasicTasks.Walk.Parameters>) (entity, context) -> {
             context.brain().memories().get(Memories.WALK_TARGET).set(Optional.of(entity.getBlockPos()));
-            return new WalkTask.Parameters() {
+            return new BasicTasks.Walk.Parameters() {
                 @Override
                 public Vec3d target() {
                     return entity.getPos();
@@ -52,7 +51,7 @@ public class TestEntity extends AbstractNpcEntity {
                     return 2.5;
                 }
             };
-        }).resetOnResult(f -> f instanceof TaskTerminalBrainNode.Success<WalkTask.Result> success && success.value() != WalkTask.Result.CONTINUE).resetOnContext((context, entity) -> {
+        }).resetOnResult(f -> f instanceof TaskTerminalBrainNode.Success<BasicTasks.Walk.Result> success && success.value() != BasicTasks.Walk.Result.CONTINUE).resetOnContext((context, entity) -> {
             final Optional<BlockPos> pos = context.brain().memories().get(Memories.WALK_TARGET).get();
             return !entity.isAlive() || (pos.isPresent() && entity.getPos().squaredDistanceTo(Vec3d.ofBottomCenter(pos.get())) > 2.5 * 2.5);
         });

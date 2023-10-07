@@ -1,9 +1,11 @@
 package io.github.stuff_stuffs.aiex_test.common.basic;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.*;
+import io.github.stuff_stuffs.aiex.common.api.entity.EntityNavigator;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.FuzzyPositions;
@@ -13,29 +15,38 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.math.random.Xoroshiro128PlusPlusRandom;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
+import java.util.function.Predicate;
 
 public final class TaskKeys {
-    public static final TaskKey<WalkTask.Result, WalkTask.Parameters> WALK_TASK_KEY = new TaskKey<>(WalkTask.Result.class, WalkTask.Parameters.class);
     public static final TaskKey<WanderTask.Result, WanderTask.Parameters> WANDER_TASK_KEY = new TaskKey<>(WanderTask.Result.class, WanderTask.Parameters.class);
 
     public static void init() {
-        Registry.register(TaskKey.REGISTRY, AiExCommon.id("walk"), WALK_TASK_KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("wander"), WANDER_TASK_KEY);
         TaskConfig.ON_BUILD_EVENT.register(TaskConfig.OnBuild.DEFAULTS_PHASE, new TaskConfig.OnBuild() {
             @Override
             public <T> void onBuild(final T entity, final TaskConfig.Builder<T> builder) {
                 if (entity instanceof Entity e) {
-                    final WalkTask.Navigator navigator = AiExApi.ENTITY_NAVIGATOR.find(e, null);
+                    final EntityNavigator navigator = AiExApi.ENTITY_NAVIGATOR.find(e, null);
                     if (navigator != null) {
-                        {
-                            //noinspection unchecked
-                            TaskConfig.Factory<T, WalkTask.Result, WalkTask.Parameters> basic = (TaskConfig.Factory<T, WalkTask.Result, WalkTask.Parameters>) (TaskConfig.Factory<Entity, WalkTask.Result, WalkTask.Parameters>) parameters -> new SimpleWalkTask(parameters.target(), parameters.maxError());
-                            if (builder.hasFactory(WALK_TASK_KEY)) {
-                                final TaskConfig.Factory<T, WalkTask.Result, WalkTask.Parameters> current = builder.getFactory(WALK_TASK_KEY);
-                                basic = current.fallbackTo(basic);
-                            }
-                            builder.putFactory(WALK_TASK_KEY, basic);
+                        //noinspection unchecked
+                        TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> basic = (TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters>) (TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters>) parameters -> new SimpleWalkTask(parameters.target(), parameters.maxError());
+                        if (builder.hasFactory(BasicTasks.Walk.KEY)) {
+                            final TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> current = builder.getFactory(BasicTasks.Walk.KEY);
+                            basic = current.fallbackTo(basic);
                         }
+                        builder.putFactory(BasicTasks.Walk.KEY, basic);
+                    }
+                    if (builder.hasFactory(BasicTasks.Walk.KEY)) {
+                        //noinspection unchecked
+                        TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> basic = (TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters>) (TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters>) TaskKeys::dynamicWalk;
+                        if (builder.hasFactory(BasicTasks.Walk.DYNAMIC_KEY)) {
+                            final TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> current = builder.getFactory(BasicTasks.Walk.DYNAMIC_KEY);
+                            basic = current.fallbackTo(basic);
+                        }
+                        builder.putFactory(BasicTasks.Walk.DYNAMIC_KEY, basic);
                     }
                     if (builder.hasFactory(WANDER_TASK_KEY)) {
                         //noinspection unchecked
@@ -51,9 +62,11 @@ public final class TaskKeys {
         });
     }
 
-    private static final class SimpleWalkTask implements Task<WalkTask.Result, Entity> {
+
+    private static final class SimpleWalkTask implements Task<BasicTasks.Walk.Result, Entity> {
         private final Vec3d target;
         private final double maxError;
+        private @Nullable BrainResources.Token token = null;
 
         private SimpleWalkTask(final Vec3d target, final double maxError) {
             this.target = target;
@@ -61,23 +74,54 @@ public final class TaskKeys {
         }
 
         @Override
-        public WalkTask.Result run(final BrainContext<Entity> context) {
-            final WalkTask.Navigator navigator = AiExApi.ENTITY_NAVIGATOR.find(context.entity(), null);
+        public BasicTasks.Walk.Result run(final BrainContext<Entity> context) {
+            if (token == null || !token.active()) {
+                final Optional<BrainResources.Token> token = context.brain().resources().get(BrainResource.BODY_CONTROL);
+                if (token.isEmpty()) {
+                    return BasicTasks.Walk.Result.RESOURCE_ACQUISITION_ERROR;
+                }
+                this.token = token.get();
+            }
+            final EntityNavigator navigator = AiExApi.ENTITY_NAVIGATOR.find(context.entity(), null);
             if (navigator == null) {
                 throw new IllegalStateException();
             }
             final boolean done = navigator.walkTo(target, maxError);
             if (!done) {
-                return WalkTask.Result.CONTINUE;
+                return BasicTasks.Walk.Result.CONTINUE;
             }
-            return context.entity().getPos().squaredDistanceTo(target) <= maxError * maxError ? WalkTask.Result.DONE : WalkTask.Result.FAILED;
+            return context.entity().getPos().squaredDistanceTo(target) <= maxError * maxError ? BasicTasks.Walk.Result.DONE : BasicTasks.Walk.Result.CANNOT_REACH;
+        }
+
+        @Override
+        public void stop(final AiBrainView context) {
+            if (token != null && token.active()) {
+                context.resources().release(token);
+            }
         }
     }
+
+    public static Task<BasicTasks.Walk.Result, Entity> dynamicWalk(final BasicTasks.Walk.Parameters parameters) {
+        return Tasks.expect(new ContextResetTask<>(BasicTasks.Walk.KEY, context -> parameters, new Predicate<>() {
+            private Vec3d last = parameters.target();
+
+            @Override
+            public boolean test(final BrainContext<Entity> context) {
+                final double r = parameters.maxError() * 0.25;
+                if (last.squaredDistanceTo(parameters.target()) > r * r) {
+                    last = parameters.target();
+                    return true;
+                }
+                return false;
+            }
+        }), () -> new RuntimeException("Task not present"));
+    }
+
 
     private static final class SimpleWanderTask implements Task<WanderTask.Result, Entity> {
         private final Vec3d center;
         private final double range;
-        private Task<WalkTask.Result, Entity> currentWalk;
+        private Task<BasicTasks.Walk.Result, Entity> currentWalk;
 
         private SimpleWanderTask(final Vec3d center, final double range) {
             this.center = center;
@@ -101,7 +145,7 @@ public final class TaskKeys {
                 if (best == null) {
                     return WanderTask.Result.FAILED;
                 }
-                currentWalk = context.createTask(WALK_TASK_KEY, new WalkTask.Parameters() {
+                currentWalk = context.createTask(BasicTasks.Walk.KEY, new BasicTasks.Walk.Parameters() {
                     @Override
                     public Vec3d target() {
                         return best;
@@ -116,14 +160,19 @@ public final class TaskKeys {
             if (currentWalk == null) {
                 return WanderTask.Result.FAILED;
             }
-            final WalkTask.Result result = currentWalk.run(context);
-            if (result == WalkTask.Result.FAILED) {
+            final BasicTasks.Walk.Result result = currentWalk.run(context);
+            if (result == BasicTasks.Walk.Result.CANNOT_REACH || result == BasicTasks.Walk.Result.RESOURCE_ACQUISITION_ERROR) {
                 return WanderTask.Result.FAILED;
             }
-            if (result == WalkTask.Result.DONE) {
+            if (result == BasicTasks.Walk.Result.DONE) {
                 currentWalk = null;
             }
             return WanderTask.Result.SUCCESS;
+        }
+
+        @Override
+        public void stop(final AiBrainView context) {
+
         }
     }
 

@@ -38,6 +38,16 @@ public interface TaskConfig<T> {
     interface Factory<T, R, P> {
         @Nullable Task<R, T> create(P parameters);
 
+        default <P0> Factory<T, R, P0> conditional(final Class<P> clazz) {
+            return parameters -> {
+                if (clazz.isInstance(parameters)) {
+                    //noinspection unchecked
+                    return create((P) parameters);
+                }
+                return null;
+            };
+        }
+
         default Factory<T, R, P> fallbackTo(final Factory<T, R, ? super P> factory) {
             return parameters -> {
                 final Task<R, T> task = create(parameters);

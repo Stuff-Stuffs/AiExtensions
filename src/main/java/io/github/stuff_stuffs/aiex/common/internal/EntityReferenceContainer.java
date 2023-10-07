@@ -7,9 +7,7 @@ import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenHashMap;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -58,7 +56,7 @@ public class EntityReferenceContainer {
             final NbtCompound compound = NbtIo.readCompressed(directory.toFile());
             for (final String key : compound.getKeys()) {
                 final UUID uuid = UUID.fromString(key);
-                final Optional<EntityReferenceImpl> result = EntityReferenceImpl.CODEC.parse(NbtOps.INSTANCE, compound.get(key)).result();
+                final Optional<EntityReferenceImpl> result = EntityReferenceImpl.decode(uuid, compound.getCompound(key));
                 if (result.isPresent()) {
                     map.put(uuid, result.get());
                 }
@@ -74,7 +72,7 @@ public class EntityReferenceContainer {
         final Path directory = session.getDirectory(AiExCommon.ENTITY_REFERENCE_SAVE_PATH);
         final NbtCompound root = new NbtCompound();
         for (final Map.Entry<UUID, EntityReferenceImpl> entry : map.entrySet()) {
-            final Optional<NbtElement> result = EntityReferenceImpl.CODEC.encodeStart(NbtOps.INSTANCE, entry.getValue()).result();
+            final Optional<NbtCompound> result = EntityReferenceImpl.encode(entry.getValue(), false);
             if (result.isPresent()) {
                 root.put(entry.getKey().toString(), result.get());
             }

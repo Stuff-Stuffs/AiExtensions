@@ -326,7 +326,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
         }
 
         public void tick(final long timestamp) {
-            while (expirationQueue.first().expiration < timestamp) {
+            while (!expirationQueue.isEmpty() && expirationQueue.first().expiration < timestamp) {
                 final EventEntry entry = expirationQueue.dequeue();
                 allEvents.remove(entry);
                 allEventsReversed.remove(entry);

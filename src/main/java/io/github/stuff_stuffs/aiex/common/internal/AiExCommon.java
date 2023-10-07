@@ -3,10 +3,10 @@ package io.github.stuff_stuffs.aiex.common.internal;
 import io.github.stuff_stuffs.aiex.common.api.AiExGameRules;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.entity_reference.EntityReferenceDataType;
 import io.github.stuff_stuffs.aiex.common.mixin.MixinWorldSavePath;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
 import org.slf4j.Logger;
@@ -22,9 +22,9 @@ public class AiExCommon implements ModInitializer {
         AiBrainEventTypes.init();
         AiExGameRules.init();
         Memories.init();
+        BasicTasks.init();
         EntityReferenceDataType.REGISTRY.getCodec();
         EntityReferenceDataTypeCache.clear();
-        ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> entity.aiex$getAndUpdateReference());
     }
 
     public static Identifier id(final String path) {
