@@ -36,10 +36,10 @@ public class MixinDamageSources {
     private void createHook(final RegistryKey<DamageType> key, @Nullable Entity attacker, @Nullable Entity source, final CallbackInfoReturnable<DamageSource> cir) {
         if (attacker instanceof AiFakePlayer || source instanceof AiFakePlayer) {
             if (attacker instanceof AiFakePlayer fake) {
-                attacker = fake.delegate;
+                attacker = fake.getDelegate();
             }
             if (source instanceof AiFakePlayer fake) {
-                source = fake.delegate;
+                source = fake.getDelegate();
             }
             cir.setReturnValue(new DamageSource(registry.entryOf(key), attacker, source));
         }

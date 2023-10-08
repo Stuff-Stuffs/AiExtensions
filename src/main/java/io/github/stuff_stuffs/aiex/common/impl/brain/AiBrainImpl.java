@@ -149,7 +149,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
         };
         if (!init) {
             if (entity instanceof AbstractNpcEntity e) {
-                fakePlayer = new AiFakePlayer((ServerWorld) entity.getEntityWorld(), e);
+                fakePlayer = AiFakePlayer.create(e, (ServerWorld) e.getEntityWorld());
             }
             rootNode.init(brainContext);
             init = true;
