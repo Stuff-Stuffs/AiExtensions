@@ -11,7 +11,7 @@ import java.util.Optional;
 public final class Memories {
     public static final Memory<Integer> ITEM_USE_COOLDOWN = BasicMemory.builder(Codec.intRange(0, Integer.MAX_VALUE)).build();
     public static final Memory<Integer> ITEM_ATTACK_COOLDOWN = BasicMemory.builder(Codec.intRange(0, Integer.MAX_VALUE)).build();
-    public static final Memory<Optional<BlockPos>> WALK_TARGET = BasicMemory.builder(BlockPos.CODEC.optionalFieldOf("val").codec()).build();
+    public static final Memory<Optional<BlockPos>> WALK_TARGET = BasicMemory.<Optional<BlockPos>>ephemeralBuilder().build();
 
     public static void init() {
         Registry.register(Memory.REGISTRY, AiExCommon.id("item_use_cooldown"), ITEM_USE_COOLDOWN);

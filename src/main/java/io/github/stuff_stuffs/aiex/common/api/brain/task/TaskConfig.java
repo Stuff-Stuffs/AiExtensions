@@ -41,7 +41,6 @@ public interface TaskConfig<T> {
         default <P0> Factory<T, R, P0> conditional(final Class<P> clazz) {
             return parameters -> {
                 if (clazz.isInstance(parameters)) {
-                    //noinspection unchecked
                     return create((P) parameters);
                 }
                 return null;

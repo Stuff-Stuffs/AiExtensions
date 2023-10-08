@@ -51,7 +51,7 @@ public class TestEntity extends AbstractNpcEntity {
                     return 2.5;
                 }
             };
-        }).resetOnResult(f -> f instanceof TaskTerminalBrainNode.Success<BasicTasks.Walk.Result> success && success.value() != BasicTasks.Walk.Result.CONTINUE).resetOnContext((context, entity) -> {
+        }).resetOnResult(TaskTerminalBrainNode.successInnerPredicate(result -> result != BasicTasks.Walk.Result.CONTINUE)).resetOnContext((context, entity) -> {
             final Optional<BlockPos> pos = context.brain().memories().get(Memories.WALK_TARGET).get();
             return !entity.isAlive() || (pos.isPresent() && entity.getPos().squaredDistanceTo(Vec3d.ofBottomCenter(pos.get())) > 2.5 * 2.5);
         });

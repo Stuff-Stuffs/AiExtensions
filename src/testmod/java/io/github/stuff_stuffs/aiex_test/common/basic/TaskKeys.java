@@ -15,10 +15,10 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.util.math.random.Xoroshiro128PlusPlusRandom;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
-import java.util.function.Predicate;
 
 public final class TaskKeys {
     public static final TaskKey<WanderTask.Result, WanderTask.Parameters> WANDER_TASK_KEY = new TaskKey<>(WanderTask.Result.class, WanderTask.Parameters.class);
@@ -41,9 +41,9 @@ public final class TaskKeys {
                     }
                     if (builder.hasFactory(BasicTasks.Walk.KEY)) {
                         //noinspection unchecked
-                        TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> basic = (TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters>) (TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters>) TaskKeys::dynamicWalk;
+                        TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters> basic = (TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters>) (TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters>) TaskKeys::dynamicWalk;
                         if (builder.hasFactory(BasicTasks.Walk.DYNAMIC_KEY)) {
-                            final TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> current = builder.getFactory(BasicTasks.Walk.DYNAMIC_KEY);
+                            final TaskConfig.Factory<T, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters> current = builder.getFactory(BasicTasks.Walk.DYNAMIC_KEY);
                             basic = current.fallbackTo(basic);
                         }
                         builder.putFactory(BasicTasks.Walk.DYNAMIC_KEY, basic);
@@ -101,20 +101,19 @@ public final class TaskKeys {
         }
     }
 
-    public static Task<BasicTasks.Walk.Result, Entity> dynamicWalk(final BasicTasks.Walk.Parameters parameters) {
-        return Tasks.expect(new ContextResetTask<>(BasicTasks.Walk.KEY, context -> parameters, new Predicate<>() {
-            private Vec3d last = parameters.target();
-
-            @Override
-            public boolean test(final BrainContext<Entity> context) {
+    public static Task<BasicTasks.Walk.Result, Entity> dynamicWalk(final BasicTasks.Walk.DynamicParameters parameters) {
+        return Tasks.expect(new SelectorPairTask<>(context -> {
+            final MutableObject<Vec3d> last = new MutableObject<>(parameters.target());
+            return Tasks.expect(new ContextResetTask<>(ctx -> ctx.createTask(BasicTasks.Walk.KEY, parameters).orElse(null), ctx -> {
                 final double r = parameters.maxError() * 0.25;
-                if (last.squaredDistanceTo(parameters.target()) > r * r) {
-                    last = parameters.target();
+                final Vec3d current = parameters.target();
+                if (last.getValue().squaredDistanceTo(current) > r * r) {
+                    last.setValue(current);
                     return true;
                 }
                 return false;
-            }
-        }), () -> new RuntimeException("Task not present"));
+            }), () -> new RuntimeException("Walk task factory missing!"));
+        }, context -> Tasks.constant(BasicTasks.Walk.Result.DONE), ctx -> !parameters.shouldStop(), true), () -> new RuntimeException("wtf!"));
     }
 
 

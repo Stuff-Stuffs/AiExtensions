@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 
 import java.util.Optional;
@@ -7,6 +8,20 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public final class Tasks {
+    public static <R, C> Task<R, C> constant(final R val) {
+        return new Task<>() {
+            @Override
+            public R run(final BrainContext<C> context) {
+                return val;
+            }
+
+            @Override
+            public void stop(final AiBrainView context) {
+
+            }
+        };
+    }
+
     public static <R, C> Task<R, C> expect(final Task<Optional<R>, C> task, final Supplier<? extends RuntimeException> errorFactory) {
         return task.adaptResult(res -> res.orElseThrow(errorFactory));
     }

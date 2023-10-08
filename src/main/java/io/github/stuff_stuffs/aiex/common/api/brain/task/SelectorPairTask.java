@@ -5,25 +5,25 @@ import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
-public class SelectorPairTask<R, C, P0, P1> implements Task<Optional<R>, C> {
-    private final TaskKey<R, P0> trueKey;
-    private final TaskKey<R, P1> falseKey;
-    private final Supplier<P0> trueParameterFactory;
-    private final Supplier<P1> falseParameterFactory;
+public class SelectorPairTask<R, C> implements Task<Optional<R>, C> {
+    private final Function<BrainContext<C>, @Nullable Task<R, C>> trueFactory;
+    private final Function<BrainContext<C>, @Nullable Task<R, C>> falseFactory;
     private final Predicate<BrainContext<C>> selector;
     private final boolean dynamic;
     private @Nullable Task<R, C> current;
     private boolean state;
     private boolean init = false;
 
-    public SelectorPairTask(final TaskKey<R, P0> trueKey, final TaskKey<R, P1> falseKey, final Supplier<P0> trueParameterFactory, final Supplier<P1> falseParameterFactory, final Predicate<BrainContext<C>> selector, final boolean dynamic) {
-        this.trueKey = trueKey;
-        this.falseKey = falseKey;
-        this.trueParameterFactory = trueParameterFactory;
-        this.falseParameterFactory = falseParameterFactory;
+    public <P0, P1> SelectorPairTask(final TaskKey<R, P0> trueKey, final Function<BrainContext<C>, P0> trueParameterFactory, final TaskKey<R, P1> falseKey, final Function<BrainContext<C>, P1> falseParameterFactory, final Predicate<BrainContext<C>> selector, final boolean dynamic) {
+        this(context -> context.createTask(trueKey, trueParameterFactory.apply(context)).orElse(null), context -> context.createTask(falseKey, falseParameterFactory.apply(context)).orElse(null), selector, dynamic);
+    }
+
+    public SelectorPairTask(final Function<BrainContext<C>, @Nullable Task<R, C>> trueFactory, final Function<BrainContext<C>, @Nullable Task<R, C>> falseFactory, final Predicate<BrainContext<C>> selector, final boolean dynamic) {
+        this.trueFactory = trueFactory;
+        this.falseFactory = falseFactory;
         this.selector = selector;
         this.dynamic = dynamic;
     }
@@ -34,16 +34,16 @@ public class SelectorPairTask<R, C, P0, P1> implements Task<Optional<R>, C> {
             init = true;
             final boolean s = selector.test(context);
             if (!init || (dynamic && (state ^ s))) {
-                final Optional<Task<R, C>> task;
+                final @Nullable Task<R, C> task;
                 if (s) {
-                    task = context.createTask(trueKey, trueParameterFactory.get());
+                    task = trueFactory.apply(context);
                 } else {
-                    task = context.createTask(falseKey, falseParameterFactory.get());
+                    task = falseFactory.apply(context);
                 }
                 if (current != null) {
                     current.stop(context.brain());
                 }
-                current = task.orElse(null);
+                current = task;
             }
             state = s;
         }

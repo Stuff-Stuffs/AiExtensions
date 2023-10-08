@@ -10,7 +10,7 @@ import java.util.UUID;
 public final class BasicTasks {
     public static final class Walk {
         public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
-        public static final TaskKey<Walk.Result, Walk.Parameters> DYNAMIC_KEY = new TaskKey<>(Result.class, Parameters.class);
+        public static final TaskKey<Result, DynamicParameters> DYNAMIC_KEY = new TaskKey<>(Result.class, DynamicParameters.class);
 
         public enum Result {
             CONTINUE,
@@ -27,6 +27,10 @@ public final class BasicTasks {
             default double urgency() {
                 return 0.0;
             }
+        }
+
+        public interface DynamicParameters extends Parameters {
+            boolean shouldStop();
         }
 
         private Walk() {
