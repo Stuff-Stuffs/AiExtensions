@@ -52,20 +52,6 @@ public final class BasicBrainNodes {
         });
     }
 
-    public static <C> BrainNode<C, TaskTerminalBrainNode.Result<WanderTask.Result>, Vec3d> wander(final TaskKey<WanderTask.Result, WanderTask.Parameters> key, final double range) {
-        return new TaskTerminalBrainNode<>(key, (vec3d, context) -> new WanderTask.Parameters() {
-            @Override
-            public Vec3d center() {
-                return vec3d;
-            }
-
-            @Override
-            public double range() {
-                return range;
-            }
-        });
-    }
-
     public static <C, FC> BrainNode<C, TaskTerminalBrainNode.Result<BasicTasks.Walk.Result>, FC> walk(final TaskKey<BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> key, final Function<FC, BasicTasks.Walk.Parameters> parameterFactory) {
         return new TaskTerminalBrainNode<>(key, (ctx, context) -> parameterFactory.apply(ctx));
     }

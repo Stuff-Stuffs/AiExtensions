@@ -73,10 +73,33 @@ public final class BasicTasks {
         }
     }
 
+    public static final class Look {
+        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
+        public static final TaskKey<Result, Parameters> DYNAMIC_KEY = new TaskKey<>(Result.class, Parameters.class);
+
+        public enum Result {
+            CONTINUE,
+            FAILED,
+            ALIGNED,
+            RESOURCE_ACQUISITION_ERROR
+        }
+
+        public interface Parameters {
+            Vec3d lookDir();
+
+            double lookSpeed();
+        }
+
+        private Look() {
+        }
+    }
+
     public static void init() {
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_walk"), Walk.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_walk"), Walk.DYNAMIC_KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_attack"), Attack.KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_look"), Look.KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_look"), Look.DYNAMIC_KEY);
     }
 
     private BasicTasks() {

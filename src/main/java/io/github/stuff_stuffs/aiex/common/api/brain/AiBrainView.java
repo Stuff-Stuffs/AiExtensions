@@ -28,21 +28,29 @@ public interface AiBrainView {
 
         boolean forget(AiBrainEvent event);
 
-        List<AiBrainEvent> query(long since);
+        default List<AiBrainEvent> query(final long since) {
+            return query(since, false);
+        }
 
-        Stream<AiBrainEvent> streamQuery(long since);
+        List<AiBrainEvent> query(long since, boolean reversed);
 
-        List<AiBrainEvent> queryReversed(long since);
+        default Stream<AiBrainEvent> streamQuery(final long since) {
+            return streamQuery(since, false);
+        }
 
-        Stream<AiBrainEvent> streamQueryReversed(long since);
+        Stream<AiBrainEvent> streamQuery(long since, boolean reversed);
 
-        <T extends AiBrainEvent> List<T> query(AiBrainEventType<T> type, long since);
+        default <T extends AiBrainEvent> List<T> query(final AiBrainEventType<T> type, final long since) {
+            return query(type, since, false);
+        }
 
-        <T extends AiBrainEvent> Stream<T> streamQuery(AiBrainEventType<T> type, long since);
+        <T extends AiBrainEvent> List<T> query(AiBrainEventType<T> type, long since, boolean reversed);
 
-        <T extends AiBrainEvent> List<T> queryReversed(AiBrainEventType<T> type, long since);
+        default <T extends AiBrainEvent> Stream<T> streamQuery(final AiBrainEventType<T> type, final long since) {
+            return streamQuery(type, since, false);
+        }
 
-        <T extends AiBrainEvent> Stream<T> streamQueryReversed(AiBrainEventType<T> type, long since);
+        <T extends AiBrainEvent> Stream<T> streamQuery(AiBrainEventType<T> type, long since, boolean reversed);
     }
 
     interface Memories {

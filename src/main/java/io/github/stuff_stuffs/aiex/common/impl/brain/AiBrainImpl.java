@@ -222,8 +222,8 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     }
 
     @Override
-    public List<AiBrainEvent> query(final long since) {
-        final SortedSet<EventEntry> query = handler.query(since);
+    public List<AiBrainEvent> query(final long since, final boolean reversed) {
+        final SortedSet<EventEntry> query = reversed ? handler.queryReversed(since) : handler.query(since);
         if (query.isEmpty()) {
             return Collections.emptyList();
         }
@@ -235,31 +235,13 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     }
 
     @Override
-    public Stream<AiBrainEvent> streamQuery(final long since) {
-        return handler.query(since).stream().map(entry -> entry.event);
+    public Stream<AiBrainEvent> streamQuery(final long since, final boolean reversed) {
+        return (reversed ? handler.queryReversed(since) : handler.query(since)).stream().map(entry -> entry.event);
     }
 
     @Override
-    public List<AiBrainEvent> queryReversed(final long since) {
-        final SortedSet<EventEntry> query = handler.queryReversed(since);
-        if (query.isEmpty()) {
-            return Collections.emptyList();
-        }
-        final List<AiBrainEvent> list = new ArrayList<>(query.size());
-        for (final EventEntry entry : query) {
-            list.add(entry.event);
-        }
-        return list;
-    }
-
-    @Override
-    public Stream<AiBrainEvent> streamQueryReversed(final long since) {
-        return handler.queryReversed(since).stream().map(entry -> entry.event);
-    }
-
-    @Override
-    public <T0 extends AiBrainEvent> List<T0> query(final AiBrainEventType<T0> type, final long since) {
-        final SortedSet<EventEntry> query = handler.query(type, since);
+    public <T0 extends AiBrainEvent> List<T0> query(final AiBrainEventType<T0> type, final long since, final boolean reversed) {
+        final SortedSet<EventEntry> query = reversed ? handler.queryReversed(type, since) : handler.query(type, since);
         if (query.isEmpty()) {
             return Collections.emptyList();
         }
@@ -272,29 +254,9 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     }
 
     @Override
-    public <T0 extends AiBrainEvent> Stream<T0> streamQuery(final AiBrainEventType<T0> type, final long since) {
+    public <T0 extends AiBrainEvent> Stream<T0> streamQuery(final AiBrainEventType<T0> type, final long since, final boolean reversed) {
         //noinspection unchecked
-        return handler.query(type, since).stream().map(entry -> (T0) entry.event);
-    }
-
-    @Override
-    public <T0 extends AiBrainEvent> List<T0> queryReversed(final AiBrainEventType<T0> type, final long since) {
-        final SortedSet<EventEntry> query = handler.queryReversed(type, since);
-        if (query.isEmpty()) {
-            return Collections.emptyList();
-        }
-        final List<T0> list = new ArrayList<>(query.size());
-        for (final EventEntry entry : query) {
-            //noinspection unchecked
-            list.add((T0) entry.event);
-        }
-        return list;
-    }
-
-    @Override
-    public <T0 extends AiBrainEvent> Stream<T0> streamQueryReversed(final AiBrainEventType<T0> type, final long since) {
-        //noinspection unchecked
-        return handler.query(type, since).stream().map(entry -> (T0) entry.event);
+        return (reversed ? handler.queryReversed(type, since) : handler.query(type, since)).stream().map(entry -> (T0) entry.event);
     }
 
     protected static class EventHandler {

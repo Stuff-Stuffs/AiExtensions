@@ -1,10 +1,12 @@
 package io.github.stuff_stuffs.aiex.common.internal;
 
+import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.AiExGameRules;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.entity_reference.EntityReferenceDataType;
+import io.github.stuff_stuffs.aiex.common.api.util.AfterRegistryFreezeEvent;
 import io.github.stuff_stuffs.aiex.common.mixin.MixinWorldSavePath;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.util.Identifier;
@@ -19,12 +21,13 @@ public class AiExCommon implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        AiExApi.init();
         AiBrainEventTypes.init();
         AiExGameRules.init();
         Memories.init();
         BasicTasks.init();
         EntityReferenceDataType.REGISTRY.getCodec();
-        EntityReferenceDataTypeCache.clear();
+        AfterRegistryFreezeEvent.EVENT.register(EntityReferenceDataTypeCache::clear);
     }
 
     public static Identifier id(final String path) {

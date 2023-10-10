@@ -23,6 +23,11 @@ public record BrainResource(Identifier id, int maxTicketCount) {
     }
 
     public static BrainResource ofEquipmentSlot(final EquipmentSlot slot) {
+        if (slot == EquipmentSlot.MAINHAND) {
+            return MAIN_HAND_CONTROL;
+        } else if (slot == EquipmentSlot.OFFHAND) {
+            return OFF_HAND_CONTROL;
+        }
         return new BrainResource(AiExCommon.id("equip_slot/" + slot.getArmorStandSlotId()), 1);
     }
 

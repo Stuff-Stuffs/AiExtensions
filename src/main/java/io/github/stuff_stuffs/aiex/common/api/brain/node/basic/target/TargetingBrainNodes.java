@@ -63,12 +63,7 @@ public final class TargetingBrainNodes {
             @Override
             protected Optional<R> query(final BrainContext<C> context, final FC arg) {
                 final AiBrainView.Events events = context.brain().events();
-                final Stream<E> query;
-                if (oldest) {
-                    query = events.streamQuery(type, context.brain().age() - bufferTime);
-                } else {
-                    query = events.streamQueryReversed(type, context.brain().age() - bufferTime);
-                }
+                final Stream<E> query = events.streamQuery(type, context.brain().age() - bufferTime, !oldest);
                 return extractor.apply(context, arg, query);
             }
         };

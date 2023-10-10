@@ -9,11 +9,13 @@ import io.github.stuff_stuffs.aiex.common.internal.entity.DummyBrain;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.brain.Brain;
+import net.minecraft.entity.ai.control.BodyControl;
+import net.minecraft.entity.ai.control.JumpControl;
+import net.minecraft.entity.ai.control.LookControl;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
-import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
@@ -28,6 +30,16 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
 
     protected AbstractAiMobEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
+        lookControl = new LookControl(this) {
+            @Override
+            public void tick() {
+            }
+        };
+        jumpControl = new JumpControl(this) {
+            @Override
+            public void tick() {
+            }
+        };
     }
 
     @Override
@@ -36,6 +48,15 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
     }
 
     protected abstract void deserializeBrain(NbtCompound brainNbt);
+
+    @Override
+    protected BodyControl createBodyControl() {
+        return new BodyControl(this) {
+            @Override
+            public void tick() {
+            }
+        };
+    }
 
     @Override
     protected void applyDamage(final DamageSource source, final float amount) {
@@ -51,9 +72,9 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
         if (getEntityWorld() instanceof ServerWorld world) {
             final double range = observableEntityRange();
             final Box box = Box.of(getPos(), range * 2, range * 2, range * 2);
-            final List<? extends Entity> list = world.getEntitiesByClass(observableEntityClass(), box, EntityPredicates.EXCEPT_SPECTATOR.and(entity -> entity != this));
+            final List<? extends Entity> list = world.getEntitiesByClass(observableEntityClass(), box, entity -> entity.isAlive() && !entity.isSpectator());
             final double radians = Math.cos(Math.toRadians(fieldOfView()) * 0.5F);
-            final Vec3d vector = getRotationVector();
+            final Vec3d vector = getRotationVec(1.0F);
             final AiBrainView brainView = aiex$getBrain();
             final long brainAge = brainView.age();
             final long oldest = brainAge - ObservedEntityBrainEvent.LIFETIME;
@@ -114,7 +135,7 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
     }
 
     @Override
-    protected float getActiveEyeHeight(EntityPose pose, EntityDimensions dimensions) {
+    protected float getActiveEyeHeight(final EntityPose pose, final EntityDimensions dimensions) {
         return super.getActiveEyeHeight(pose, dimensions);
     }
 
@@ -129,17 +150,17 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
     }
 
     @Override
-    protected void attackLivingEntity(LivingEntity target) {
+    protected void attackLivingEntity(final LivingEntity target) {
         super.attackLivingEntity(target);
     }
 
     @Override
-    protected void setFlag(int index, boolean value) {
+    protected void setFlag(final int index, final boolean value) {
         super.setFlag(index, value);
     }
 
     @Override
-    protected boolean getFlag(int index) {
+    protected boolean getFlag(final int index) {
         return super.getFlag(index);
     }
 

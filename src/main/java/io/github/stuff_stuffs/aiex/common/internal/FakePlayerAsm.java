@@ -61,7 +61,7 @@ public final class FakePlayerAsm {
         final String clazzDescriptor = Type.getDescriptor(clazz);
         classVisitor.visitField(Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL, "delegate", clazzDescriptor, null, null);
         for (final Method method : clazz.getMethods()) {
-            if ((method.getModifiers() & Modifier.FINAL) == 0) {
+            if ((method.getModifiers() & Modifier.FINAL) == 0 && !method.isAnnotationPresent(AiFakePlayer.NoGenerateDelegate.class)) {
                 final Method delegateMethod;
                 try {
                     delegateMethod = clazz.getMethod(method.getName(), method.getParameterTypes());

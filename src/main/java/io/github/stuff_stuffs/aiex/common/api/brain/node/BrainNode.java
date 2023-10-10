@@ -39,7 +39,7 @@ public interface BrainNode<C, R, FC> {
             }
 
             @Override
-            public void deinit(AiBrainView brain) {
+            public void deinit(final AiBrainView brain) {
                 BrainNode.this.deinit(brain);
             }
         };
@@ -66,7 +66,7 @@ public interface BrainNode<C, R, FC> {
             }
 
             @Override
-            public void deinit(AiBrainView brain) {
+            public void deinit(final AiBrainView brain) {
                 BrainNode.this.deinit(brain);
             }
         };
@@ -98,5 +98,9 @@ public interface BrainNode<C, R, FC> {
 
     default BrainNode<C, Optional<R>, FC> latching(final Predicate<BrainContext<C>> hook, final BiPredicate<BrainContext<C>, R> unhook) {
         return new LatchingBrainNode<>(hook, unhook, this);
+    }
+
+    default <R0, R1> BrainNode<C, R1, FC> parallel(final BrainNode<C, R0, FC> node, final BiFunction<R, R0, R1> combiner) {
+        return new ParallelPairBrainNode<>(this, node, (context, firstResult, secondResult) -> combiner.apply(firstResult, secondResult));
     }
 }

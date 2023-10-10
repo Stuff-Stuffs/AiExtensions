@@ -11,8 +11,10 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.player.ItemCooldownManager;
 import net.minecraft.item.FoodComponent;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
@@ -25,14 +27,28 @@ import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("UnstableApiUsage")
 public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
-    protected final NpcHungerManager hungerManager;
     protected final NpcInventory inventory;
+    protected final ItemCooldownManager cooldownManager;
+    protected NpcHungerManager hungerManager;
 
     protected AbstractNpcEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
         experiencePoints = 0;
-        hungerManager = createHungerManager(world);
         inventory = createInventory();
+        cooldownManager = new ItemCooldownManager();
+        hungerManager = createHungerManager(world);
+    }
+
+    public NpcHungerManager getHungerManager() {
+        return hungerManager;
+    }
+
+    public ItemCooldownManager getCooldownManager() {
+        return cooldownManager;
+    }
+
+    public NpcInventory getInventory() {
+        return inventory;
     }
 
     protected NpcInventory createInventory() {
@@ -76,7 +92,7 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
     @Override
     public void tick() {
         super.tick();
-        if (getEntityWorld() instanceof ServerWorld world) {
+        if (getEntityWorld() instanceof ServerWorld world && isAlive()) {
             final AiBrain brain = aiex$getBrain();
             brain.tick(this);
             hungerManager.tick(this);
@@ -88,19 +104,19 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
         final FoodComponent component = stack.getItem().getFoodComponent();
         if (component != null) {
             hungerManager.eat(component);
-            world.playSound(null, getX(), getY(), getZ(), SoundEvents.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 0.5F, world.random.nextFloat() * 0.1F + 0.9F);
+            world.playSound(null, getX(), getY(), getZ(), SoundEvents.ENTITY_PLAYER_BURP, SoundCategory.NEUTRAL, 0.5F, world.random.nextFloat() * 0.1F + 0.9F);
         }
         return super.eatFood(world, stack);
     }
 
     @Nullable
     @Override
-    protected SoundEvent getHurtSound(final DamageSource source) {
+    public SoundEvent getHurtSound(final DamageSource source) {
         return super.getHurtSound(source);
     }
 
     @Override
-    protected void takeShieldHit(LivingEntity attacker) {
+    public void takeShieldHit(final LivingEntity attacker) {
         super.takeShieldHit(attacker);
     }
 
@@ -110,6 +126,12 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
 
     public boolean canFoodHeal() {
         return getHealth() > 0.0F && getHealth() < getMaxHealth();
+    }
+
+    public void setDifficulty(final Difficulty difficulty) {
+        final NbtCompound compound = hungerManager.writeNbt();
+        hungerManager = createHungerManager(getEntityWorld());
+        hungerManager.readNbt(compound);
     }
 
     public interface NpcHungerManager {
@@ -128,6 +150,10 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
         float getExhaustion();
 
         float getSaturationLevel();
+
+        NbtCompound writeNbt();
+
+        void readNbt(NbtCompound nbt);
     }
 
     public static class BasicNpcHungerManager implements NpcHungerManager {
@@ -218,6 +244,24 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
         @Override
         public float getSaturationLevel() {
             return saturationLevel;
+        }
+
+        @Override
+        public NbtCompound writeNbt() {
+            final NbtCompound nbt = new NbtCompound();
+            nbt.putInt("level", foodLevel);
+            nbt.putFloat("saturation", saturationLevel);
+            nbt.putFloat("exhaustion", exhaustion);
+            nbt.putInt("foodTick", foodTickTimer);
+            return nbt;
+        }
+
+        @Override
+        public void readNbt(final NbtCompound nbt) {
+            foodLevel = Math.min(maxFoodLevel, nbt.getInt("level"));
+            saturationLevel = nbt.getFloat("saturation");
+            exhaustion = nbt.getFloat("exhaustion");
+            foodTickTimer = nbt.getInt("foodTick");
         }
     }
 }

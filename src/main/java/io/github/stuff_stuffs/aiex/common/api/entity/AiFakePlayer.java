@@ -5,8 +5,13 @@ import com.mojang.authlib.GameProfile;
 import io.github.stuff_stuffs.aiex.common.internal.FakePlayerAsm;
 import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.server.world.ServerWorld;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,6 +28,12 @@ public class AiFakePlayer extends FakePlayer {
         this.delegate = delegate;
     }
 
+    @Override
+    @NoGenerateDelegate
+    public EntityType<?> getType() {
+        return super.getType();
+    }
+
     public Entity getDelegate() {
         return delegate;
     }
@@ -34,5 +45,10 @@ public class AiFakePlayer extends FakePlayer {
             GAME_PROFILE_CACHE.put(entity.getUuid(), profile);
         }
         return profile;
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface NoGenerateDelegate {
     }
 }
