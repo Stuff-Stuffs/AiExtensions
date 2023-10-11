@@ -1,7 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node;
 
 import com.mojang.datafixers.util.Unit;
-import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.*;
 
@@ -16,7 +15,7 @@ public interface BrainNode<C, R, FC> {
 
     R tick(BrainContext<C> context, FC arg);
 
-    void deinit(AiBrainView brain);
+    void deinit(BrainContext<C> context);
 
     default BrainNode<C, Unit, FC> discardResult() {
         return adaptResult((context, r) -> Unit.INSTANCE);
@@ -39,8 +38,8 @@ public interface BrainNode<C, R, FC> {
             }
 
             @Override
-            public void deinit(final AiBrainView brain) {
-                BrainNode.this.deinit(brain);
+            public void deinit(final BrainContext<C> context) {
+                BrainNode.this.deinit(context);
             }
         };
     }
@@ -66,8 +65,8 @@ public interface BrainNode<C, R, FC> {
             }
 
             @Override
-            public void deinit(final AiBrainView brain) {
-                BrainNode.this.deinit(brain);
+            public void deinit(final BrainContext<C> context) {
+                BrainNode.this.deinit(context);
             }
         };
     }

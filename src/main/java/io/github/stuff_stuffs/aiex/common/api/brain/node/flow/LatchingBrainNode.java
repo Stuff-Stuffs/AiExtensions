@@ -1,6 +1,5 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
-import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 
@@ -43,7 +42,7 @@ public class LatchingBrainNode<C, R, FC> implements BrainNode<C, Optional<R>, FC
     }
 
     @Override
-    public void deinit(AiBrainView brain) {
-        delegate.deinit(brain);
+    public void deinit(BrainContext<C> context) {
+        delegate.deinit(context);
     }
 }

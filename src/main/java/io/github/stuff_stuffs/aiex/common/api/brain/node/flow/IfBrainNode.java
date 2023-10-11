@@ -1,6 +1,5 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
-import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import net.fabricmc.fabric.api.util.TriState;
@@ -38,10 +37,10 @@ public class IfBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
             if (prev != TriState.DEFAULT) {
                 if (res ^ prev.get()) {
                     if (res) {
-                        falseBranch.deinit(context.brain());
+                        falseBranch.deinit(context);
                         trueBranch.init(context);
                     } else {
-                        trueBranch.deinit(context.brain());
+                        trueBranch.deinit(context);
                         falseBranch.init(context);
                     }
                 }
@@ -65,11 +64,11 @@ public class IfBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
     }
 
     @Override
-    public void deinit(AiBrainView brain) {
+    public void deinit(BrainContext<C> context) {
         if (prev == TriState.TRUE) {
-            trueBranch.deinit(brain);
+            trueBranch.deinit(context);
         } else if (prev == TriState.FALSE) {
-            falseBranch.deinit(brain);
+            falseBranch.deinit(context);
         }
         prev = TriState.DEFAULT;
     }

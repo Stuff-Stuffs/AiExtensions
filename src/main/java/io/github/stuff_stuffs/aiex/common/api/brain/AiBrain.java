@@ -10,13 +10,13 @@ import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
 
 public interface AiBrain<T> extends AiBrainView {
-    void tick(T entity);
+    void tick();
 
     void writeNbt(NbtCompound nbt);
 
     void readNbt(NbtCompound nbt);
 
-    static <T extends Entity> AiBrain<T> create(final BrainNode<T, Unit, Unit> root, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig) {
-        return new AiBrainImpl<>(root, config, memoryConfig, taskConfig);
+    static <T extends Entity> AiBrain<T> create(final T entity, final BrainNode<T, Unit, Unit> root, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig) {
+        return new AiBrainImpl<>(entity, root, config, memoryConfig, taskConfig);
     }
 }

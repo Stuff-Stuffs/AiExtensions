@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.internal;
 
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.AiExGameRules;
+import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
@@ -26,6 +27,7 @@ public class AiExCommon implements ModInitializer {
         AiExGameRules.init();
         Memories.init();
         BasicTasks.init();
+        BrainConfig.Key.init();
         EntityReferenceDataType.REGISTRY.getCodec();
         AfterRegistryFreezeEvent.EVENT.register(EntityReferenceDataTypeCache::clear);
     }

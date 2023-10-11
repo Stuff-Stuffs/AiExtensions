@@ -1,0 +1,128 @@
+package io.github.stuff_stuffs.aiex.common.api.brain.task.basic;
+
+import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.ContextResetTask;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.Tasks;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import org.apache.commons.lang3.mutable.MutableDouble;
+import org.apache.commons.lang3.mutable.MutableObject;
+import org.jetbrains.annotations.Nullable;
+
+public class BasicLookTask implements Task<BasicTasks.Look.Result, LivingEntity> {
+    private final Vec3d lookDir;
+    private final double lookSpeed;
+    private @Nullable BrainResources.Token headToken = null;
+    private @Nullable BrainResources.Token bodyToken = null;
+
+    public BasicLookTask(final Vec3d dir, final double speed) {
+        lookDir = dir.normalize();
+        lookSpeed = speed;
+    }
+
+    @Override
+    public BasicTasks.Look.Result run(final BrainContext<LivingEntity> context) {
+        if (headToken == null || !headToken.active()) {
+            headToken = context.brain().resources().get(BrainResource.HEAD_CONTROL).orElse(null);
+            if (headToken == null) {
+                return BasicTasks.Look.Result.RESOURCE_ACQUISITION_ERROR;
+            }
+        }
+        final LivingEntity entity = context.entity();
+        final Vec3d vector = entity.getRotationVec(1.0F);
+        final Vec3d endLook = constantSpeedSlerp(vector, lookDir, lookSpeed);
+        final float headYaw = (float) MathHelper.wrapDegrees(Math.toDegrees(Math.atan2(endLook.z, endLook.x)) - 90.0F);
+        final double len = Math.sqrt(endLook.x * endLook.x + endLook.z * endLook.z);
+        final float pitch = (float) MathHelper.wrapDegrees(Math.toDegrees(-Math.atan2(endLook.y, len)));
+        if (MathHelper.angleBetween(headYaw, entity.getYaw()) > 60.0F) {
+            if (bodyToken == null || !bodyToken.active()) {
+                bodyToken = context.brain().resources().get(BrainResource.BODY_CONTROL).orElse(null);
+                if (bodyToken == null) {
+                    return BasicTasks.Look.Result.FAILED;
+                }
+            }
+            entity.setHeadYaw(headYaw);
+            entity.setPitch(pitch);
+            final float bodyYaw;
+            final float lower = MathHelper.angleBetween(entity.getYaw(), MathHelper.wrapDegrees(headYaw - 60.0F));
+            final float upper = MathHelper.angleBetween(entity.getYaw(), MathHelper.wrapDegrees(headYaw + 60.0F));
+            if (lower < upper) {
+                bodyYaw = MathHelper.wrapDegrees(headYaw - 59.0F);
+            } else {
+                bodyYaw = MathHelper.wrapDegrees(headYaw + 59.0F);
+            }
+            entity.setYaw(bodyYaw);
+        } else {
+            entity.setHeadYaw(headYaw);
+            entity.setPitch(pitch);
+            if (MathHelper.angleBetween(headYaw, entity.getYaw()) > 1.5F) {
+                if (bodyToken == null || !bodyToken.active()) {
+                    bodyToken = context.brain().resources().get(BrainResource.BODY_CONTROL).orElse(null);
+                }
+                if (bodyToken != null && bodyToken.active()) {
+                    final float bodyYaw;
+                    final float lower = MathHelper.angleBetween(entity.getYaw(), MathHelper.wrapDegrees(headYaw - 1.5F));
+                    final float upper = MathHelper.angleBetween(entity.getYaw(), MathHelper.wrapDegrees(headYaw + 1.5F));
+                    if (lower < upper) {
+                        bodyYaw = MathHelper.wrapDegrees(headYaw - 1.5F);
+                    } else {
+                        bodyYaw = MathHelper.wrapDegrees(headYaw + 1.5F);
+                    }
+                    entity.setYaw(bodyYaw);
+                }
+            } else {
+                if (bodyToken != null && bodyToken.active()) {
+                    context.brain().resources().release(bodyToken);
+                }
+            }
+        }
+        return vector.dotProduct(endLook) > 0.99 ? BasicTasks.Look.Result.ALIGNED : BasicTasks.Look.Result.CONTINUE;
+    }
+
+    @Override
+    public void stop(final BrainContext<LivingEntity> context) {
+        if (headToken != null && headToken.active()) {
+            context.brain().resources().release(headToken);
+        }
+        if (bodyToken != null && bodyToken.active()) {
+            context.brain().resources().release(bodyToken);
+        }
+    }
+
+    private static Vec3d constantSpeedSlerp(final Vec3d start, final Vec3d end, final double stepSize) {
+        final double omega = Math.acos(start.dotProduct(end));
+        if (Math.abs(omega) < 0.00001) {
+            return end;
+        }
+        final double t = Math.min(stepSize / omega, 1.0);
+        if (t > 0.9999) {
+            return end;
+        } else if (t < 0.0001) {
+            return start;
+        }
+        final double so = Math.sin(omega);
+        final double s1to = Math.sin((1 - t) * omega);
+        final double sto = Math.sin(t * omega);
+        return start.multiply(s1to / so).add(end.multiply(sto / so));
+    }
+
+    public static Task<BasicTasks.Look.Result, LivingEntity> dynamic(final BasicTasks.Look.Parameters parameters) {
+        final MutableObject<Vec3d> last = new MutableObject<>(parameters.lookDir().normalize());
+        final MutableDouble lastSpeed = new MutableDouble(parameters.lookSpeed());
+        return Tasks.expect(new ContextResetTask<>(ctx -> ctx.createTask(BasicTasks.Look.KEY, parameters).orElse(null), ctx -> {
+            final Vec3d dir = parameters.lookDir().normalize();
+            final double speed = parameters.lookSpeed();
+            if (dir.dotProduct(last.getValue()) < 0.99 || Math.abs(speed - lastSpeed.doubleValue()) > 0.05) {
+                last.setValue(dir);
+                lastSpeed.setValue(speed);
+                return true;
+            }
+            return false;
+        }), () -> new RuntimeException("Look task factory error!"));
+    }
+}

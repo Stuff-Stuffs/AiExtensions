@@ -1,8 +1,15 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registry;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -55,7 +62,7 @@ public final class BasicTasks {
         public record GenericFailure(@Nullable Object context) implements Result {
         }
 
-        public record CooldownWait(int ticksRemaining) implements Result {
+        public record CooldownWait(float progress) implements Result {
         }
 
         public record Success(float damageDone, boolean killed) implements Result {
@@ -76,6 +83,8 @@ public final class BasicTasks {
     public static final class Look {
         public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
         public static final TaskKey<Result, Parameters> DYNAMIC_KEY = new TaskKey<>(Result.class, Parameters.class);
+        public static final TaskKey<Result, EntityParameters> ENTITY_KEY = new TaskKey<>(Result.class, EntityParameters.class);
+        public static final TaskKey<Result, EntityParameters> ENTITY_DYNAMIC_KEY = new TaskKey<>(Result.class, EntityParameters.class);
 
         public enum Result {
             CONTINUE,
@@ -90,7 +99,65 @@ public final class BasicTasks {
             double lookSpeed();
         }
 
+        public interface EntityParameters {
+            Entity entity();
+
+            RaycastContext.ShapeType type();
+
+            double lookSpeed();
+        }
+
         private Look() {
+        }
+    }
+
+    public static final class UseItem {
+        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
+
+        public sealed interface Result {
+        }
+
+        public record ResourceAcquisitionError() implements Result {
+        }
+
+        public record UsingOtherHandError() implements Result {
+        }
+
+        public record Use(ActionResult result, ItemStack newStack) implements Result {
+        }
+
+        public record UseOnBlock(ActionResult result) implements Result {
+        }
+
+        public record UseOnEntity(ActionResult result) implements Result {
+        }
+
+        public record UseTick(int time, int timeLeft) implements Result {
+        }
+
+        public record Finished(ItemStack newStack) implements Result {
+        }
+
+        public record Miss() implements Result {
+        }
+
+        public record CooldownWait(float progress) implements Result {
+        }
+
+        public sealed interface Parameters {
+            Hand hand();
+        }
+
+        public record BlockParameters(Hand hand, BlockPos pos) implements Parameters {
+        }
+
+        public record EntityParameters(Hand hand, LivingEntity entity) implements Parameters {
+        }
+
+        public record AutoParameters(Hand hand) implements Parameters {
+        }
+
+        private UseItem() {
         }
     }
 
@@ -100,6 +167,9 @@ public final class BasicTasks {
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_attack"), Attack.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_look"), Look.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_look"), Look.DYNAMIC_KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_look_entity"), Look.ENTITY_KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_look_entity"), Look.ENTITY_DYNAMIC_KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_use_item"), UseItem.KEY);
     }
 
     private BasicTasks() {

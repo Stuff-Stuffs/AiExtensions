@@ -7,7 +7,9 @@ import io.github.stuff_stuffs.aiex.common.api.brain.event.DamagedBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.ObservedEntityBrainEvent;
 import io.github.stuff_stuffs.aiex.common.internal.entity.DummyBrain;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import net.minecraft.entity.*;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.control.BodyControl;
 import net.minecraft.entity.ai.control.JumpControl;
@@ -120,48 +122,9 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
     }
 
     @Override
-    protected boolean isImmobile() {
-        return super.isImmobile();
-    }
-
-    @Override
-    protected boolean shouldSwimInFluids() {
-        return super.shouldSwimInFluids();
-    }
-
-    @Override
-    public void jump() {
-        super.jump();
-    }
-
-    @Override
-    protected float getActiveEyeHeight(final EntityPose pose, final EntityDimensions dimensions) {
-        return super.getActiveEyeHeight(pose, dimensions);
-    }
-
-    @Override
-    protected void updatePotionVisibility() {
-        super.updatePotionVisibility();
-    }
-
-    @Override
-    protected float getSoundVolume() {
-        return super.getSoundVolume();
-    }
-
-    @Override
-    protected void attackLivingEntity(final LivingEntity target) {
-        super.attackLivingEntity(target);
-    }
-
-    @Override
-    protected void setFlag(final int index, final boolean value) {
-        super.setFlag(index, value);
-    }
-
-    @Override
-    protected boolean getFlag(final int index) {
-        return super.getFlag(index);
+    public void setYaw(final float yaw) {
+        super.setYaw(yaw);
+        setBodyYaw(yaw);
     }
 
     protected float fieldOfView() {

@@ -39,6 +39,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Events {
+    private final T entity;
     private final BrainNode<T, Unit, Unit> rootNode;
     private final BrainConfig config;
     private final EventHandler handler;
@@ -50,7 +51,8 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     private long randomifier;
     private boolean init = false;
 
-    public AiBrainImpl(final BrainNode<T, Unit, Unit> node, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig) {
+    public AiBrainImpl(final T entity, final BrainNode<T, Unit, Unit> node, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig) {
+        this.entity = entity;
         rootNode = node;
         this.config = config;
         handler = new EventHandler();
@@ -89,27 +91,8 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
         return resources;
     }
 
-    @Override
-    public void tick(final T entity) {
-        if (!(entity.getEntityWorld() instanceof ServerWorld)) {
-            throw new IllegalStateException("Tried ticking Ai on client!");
-        }
-        age++;
-        randomifier = 0;
-        handler.tick(age);
-        if (memories.has(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_ATTACK_COOLDOWN)) {
-            final MemoryEntry<Integer> entry = memories.get(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_ATTACK_COOLDOWN);
-            if (entry.get() > 0) {
-                entry.set(entry.get() - 1);
-            }
-        }
-        if (memories.has(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_USE_COOLDOWN)) {
-            final MemoryEntry<Integer> entry = memories.get(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_USE_COOLDOWN);
-            if (entry.get() > 0) {
-                entry.set(entry.get() - 1);
-            }
-        }
-        final BrainContext<T> brainContext = new BrainContext<>() {
+    private BrainContext<T> createContext() {
+        return new BrainContext<>() {
             @Override
             public T entity() {
                 return entity;
@@ -147,14 +130,37 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
                 return fakePlayer != null;
             }
         };
+    }
+
+    @Override
+    public void tick() {
+        if (!(entity.getEntityWorld() instanceof ServerWorld)) {
+            throw new IllegalStateException("Tried ticking Ai on client!");
+        }
+        age++;
+        randomifier = 0;
+        handler.tick(age);
+        if (memories.has(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_ATTACK_COOLDOWN)) {
+            final MemoryEntry<Integer> entry = memories.get(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_ATTACK_COOLDOWN);
+            if (entry.get() > 0) {
+                entry.set(entry.get() - 1);
+            }
+        }
+        if (memories.has(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_USE_COOLDOWN)) {
+            final MemoryEntry<Integer> entry = memories.get(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_USE_COOLDOWN);
+            if (entry.get() > 0) {
+                entry.set(entry.get() - 1);
+            }
+        }
+        final BrainContext<T> context = createContext();
         if (!init) {
             if (entity instanceof AbstractNpcEntity e) {
                 fakePlayer = AiFakePlayer.create(e, (ServerWorld) e.getEntityWorld());
             }
-            rootNode.init(brainContext);
+            rootNode.init(context);
             init = true;
         }
-        rootNode.tick(brainContext, Unit.INSTANCE);
+        rootNode.tick(context, Unit.INSTANCE);
     }
 
     @Override
@@ -184,7 +190,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain<T>, AiBrainView.Ev
     @Override
     public void readNbt(final NbtCompound nbt) {
         if (init) {
-            rootNode.deinit(this);
+            rootNode.deinit(createContext());
             init = false;
         }
         age = nbt.getLong("age");

@@ -1,6 +1,5 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
-import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 
@@ -25,8 +24,8 @@ public class ChainedBrainNode<C, R0, FC, R1> implements BrainNode<C, R1, FC> {
     }
 
     @Override
-    public void deinit(AiBrainView brain) {
-        first.deinit(brain);
-        second.deinit(brain);
+    public void deinit(BrainContext<C> context) {
+        first.deinit(context);
+        second.deinit(context);
     }
 }

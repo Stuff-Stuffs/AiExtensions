@@ -21,7 +21,7 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.Arm;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
 import java.util.Optional;
@@ -34,37 +34,25 @@ public class TestEntity extends AbstractNpcEntity {
 
     protected TestEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
-        final BrainNode<TestEntity, TaskTerminalBrainNode.Result<BasicTasks.Walk.Result>, Entity> followNode = new TaskTerminalBrainNode<>(BasicTasks.Walk.DYNAMIC_KEY, (entity, context) -> new BasicTasks.Walk.DynamicParameters() {
+        final BrainNode<TestEntity, TaskTerminalBrainNode.Result<BasicTasks.Look.Result>, Entity> lookAtNode = new TaskTerminalBrainNode<>(BasicTasks.Look.ENTITY_DYNAMIC_KEY, (entity, context) -> new BasicTasks.Look.EntityParameters() {
             @Override
-            public boolean shouldStop() {
-                return !entity.isAlive();
+            public Entity entity() {
+                return entity;
             }
 
             @Override
-            public Vec3d target() {
-                return entity.getPos();
-            }
-
-            @Override
-            public double maxError() {
-                return 2.5;
-            }
-        });
-        final BrainNode<TestEntity, TaskTerminalBrainNode.Result<BasicTasks.Look.Result>, Entity> lookAtNode = new TaskTerminalBrainNode<>(BasicTasks.Look.DYNAMIC_KEY, (entity, context) -> new BasicTasks.Look.Parameters() {
-            @Override
-            public Vec3d lookDir() {
-                final TestEntity npc = context.entity();
-                return entity.getPos().add(0, entity.getEyeHeight(entity.getPose()), 0).subtract(npc.getPos().add(0, npc.getEyeHeight(npc.getPose()), 0));
+            public RaycastContext.ShapeType type() {
+                return RaycastContext.ShapeType.VISUAL;
             }
 
             @Override
             public double lookSpeed() {
-                return 0.05;
+                return 0.2;
             }
         });
-        final BrainNode<TestEntity, Optional<Entity>, Unit> target = TargetingBrainNodes.eventTarget(AiBrainEventTypes.DAMAGED, (context, arg, stream) -> stream.map(event -> event.sourceUuid().or(event::attackerUuid).map(uuid -> context.world().getEntity(uuid))).filter(Optional::isPresent).findFirst().flatMap(Function.identity()), AiBrainEvent.SECOND * 10, false, true);
-        final BrainNode<TestEntity, Unit, Unit> root = target.ifThen((context, entity) -> entity.isPresent(), followNode.parallel(lookAtNode, (r0, r1) -> Unit.INSTANCE).adaptArg(Optional::get), BrainNodes.empty());
-        brain = AiBrain.create(root, BrainConfig.builder().build(), MemoryConfig.builder().build(this), TaskConfig.<TestEntity>builder().build(this));
+        final BrainNode<TestEntity, Optional<Entity>, Unit> target = TargetingBrainNodes.eventTarget(AiBrainEventTypes.DAMAGED, (context, arg, stream) -> stream.map(event -> event.sourceUuid().or(event::attackerUuid).map(uuid -> context.world().getEntity(uuid))).filter(Optional::isPresent).findFirst().flatMap(Function.identity()), AiBrainEvent.SECOND * 20, false, true);
+        final BrainNode<TestEntity, Unit, Unit> root = target.ifThen((context, entity) -> entity.isPresent(), lookAtNode.discardResult().adaptArg(Optional::get), BrainNodes.empty());
+        brain = AiBrain.create(this, root, BrainConfig.builder().build(), MemoryConfig.builder().build(this), TaskConfig.<TestEntity>builder().build(this));
         updateSlim();
     }
 

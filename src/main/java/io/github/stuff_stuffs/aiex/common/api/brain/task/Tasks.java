@@ -1,6 +1,5 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
-import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 
 import java.util.Optional;
@@ -16,7 +15,7 @@ public final class Tasks {
             }
 
             @Override
-            public void stop(final AiBrainView context) {
+            public void stop(final BrainContext<C> context) {
 
             }
         };

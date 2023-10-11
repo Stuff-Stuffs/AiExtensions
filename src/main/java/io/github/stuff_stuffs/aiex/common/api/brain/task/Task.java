@@ -1,6 +1,5 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
-import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 
 import java.util.Optional;
@@ -11,7 +10,7 @@ import java.util.function.Predicate;
 public interface Task<R, C> extends Function<BrainContext<C>, R> {
     R run(BrainContext<C> context);
 
-    void stop(AiBrainView context);
+    void stop(BrainContext<C> context);
 
     @Override
     default R apply(final BrainContext<C> context) {
@@ -26,7 +25,7 @@ public interface Task<R, C> extends Function<BrainContext<C>, R> {
             }
 
             @Override
-            public void stop(final AiBrainView context) {
+            public void stop(final BrainContext<C> context) {
                 Task.this.stop(context);
             }
         };
@@ -40,7 +39,7 @@ public interface Task<R, C> extends Function<BrainContext<C>, R> {
             }
 
             @Override
-            public void stop(final AiBrainView context) {
+            public void stop(final BrainContext<C> context) {
                 Task.this.stop(context);
             }
         };

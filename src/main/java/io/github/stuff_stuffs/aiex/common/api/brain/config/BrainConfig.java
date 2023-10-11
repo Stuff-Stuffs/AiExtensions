@@ -1,6 +1,7 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.config;
 
 import io.github.stuff_stuffs.aiex.common.impl.brain.BrainConfigImpl;
+import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.minecraft.util.Identifier;
@@ -22,6 +23,8 @@ public interface BrainConfig {
         BrainConfig build();
     }
 
+    Key<Double> DEFAULT_REACH_DISTANCE = new Key<>(Double.class, 4.0);
+
     record Key<T>(Class<T> clazz, T defaultValue) {
         private static final Map<Identifier, Key<?>> FORWARD_REGISTRY = new Object2ReferenceOpenHashMap<>();
         private static final Map<Key<?>, Identifier> BACKWARD_REGISTRY = new Reference2ObjectOpenHashMap<>();
@@ -42,6 +45,10 @@ public interface BrainConfig {
 
         public static Identifier getId(final Key<?> key) {
             return BACKWARD_REGISTRY.get(key);
+        }
+
+        public static void init() {
+            register(AiExCommon.id("default_reach_distance"), DEFAULT_REACH_DISTANCE);
         }
     }
 }
