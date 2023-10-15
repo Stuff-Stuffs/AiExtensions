@@ -10,7 +10,6 @@ import net.minecraft.client.render.entity.model.ArmorEntityModel;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
 import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
@@ -21,6 +20,28 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.UseAction;
 
 public class TestEntityRenderer<T extends TestEntity, M extends PlayerEntityModel<T>> extends LivingEntityRenderer<T, M> {
+    private static final Identifier[] SKINS_SLIM = new Identifier[]{
+            new Identifier("textures/entity/player/slim/alex.png"),
+            new Identifier("textures/entity/player/slim/ari.png"),
+            new Identifier("textures/entity/player/slim/efe.png"),
+            new Identifier("textures/entity/player/slim/kai.png"),
+            new Identifier("textures/entity/player/slim/makena.png"),
+            new Identifier("textures/entity/player/slim/noor.png"),
+            new Identifier("textures/entity/player/slim/steve.png"),
+            new Identifier("textures/entity/player/slim/sunny.png"),
+            new Identifier("textures/entity/player/slim/zuri.png")
+    };
+    private static final Identifier[] SKINS_WIDE = new Identifier[]{
+            new Identifier("textures/entity/player/wide/alex.png"),
+            new Identifier("textures/entity/player/wide/ari.png"),
+            new Identifier("textures/entity/player/wide/efe.png"),
+            new Identifier("textures/entity/player/wide/kai.png"),
+            new Identifier("textures/entity/player/wide/makena.png"),
+            new Identifier("textures/entity/player/wide/noor.png"),
+            new Identifier("textures/entity/player/wide/steve.png"),
+            new Identifier("textures/entity/player/wide/sunny.png"),
+            new Identifier("textures/entity/player/wide/zuri.png")
+    };
     private final M thickModel;
     private final M slimModel;
 
@@ -55,7 +76,8 @@ public class TestEntityRenderer<T extends TestEntity, M extends PlayerEntityMode
 
     @Override
     public Identifier getTexture(final T entity) {
-        return DefaultSkinHelper.getTexture(entity.getUuid());
+        final Identifier[] skins = entity.slim() ? SKINS_SLIM : SKINS_WIDE;
+        return skins[Math.floorMod(entity.getUuid().hashCode(), skins.length)];
     }
 
     @Override

@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.impl.brain.task.TaskConfigImpl;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.fabricmc.fabric.api.event.Event;
@@ -17,30 +18,30 @@ public interface TaskConfig<T> {
         }
     }, OnBuild.ADDITION_PHASE, Event.DEFAULT_PHASE, OnBuild.FALLBACK_PHASE, OnBuild.DEFAULTS_PHASE);
 
-    boolean hasFactory(TaskKey<?, ?> key);
+    boolean hasFactory(TaskKey<?, ?, ?> key);
 
-    <R, P> Factory<T, R, P> getFactory(TaskKey<R, P> key);
+    <R, P, FC> Factory<T, R, P, FC> getFactory(TaskKey<R, P, FC> key);
 
     static <T> Builder<T> builder() {
         return new TaskConfigImpl.BuilderImpl<>();
     }
 
     interface Builder<T> {
-        boolean hasFactory(TaskKey<?, ?> key);
+        boolean hasFactory(TaskKey<?, ?, ?> key);
 
-        <R, P> Factory<T, R, P> getFactory(TaskKey<R, P> key);
+        <R, P, FC> Factory<T, R, P, FC> getFactory(TaskKey<R, P, FC> key);
 
-        <R, P> void putFactory(TaskKey<R, P> key, Factory<T, R, P> taskFactory);
+        <R, P, FC> void putFactory(TaskKey<R, P, FC> key, Factory<T, R, P, FC> taskFactory);
 
         TaskConfig<T> build(T entity);
     }
 
-    interface Factory<T, R, P> {
-        @Nullable Task<R, T> create(P parameters);
+    interface Factory<T, R, P, FC> {
+        @Nullable BrainNode<T, R, FC> create(P parameters);
 
-        default Factory<T, R, P> fallbackTo(final Factory<T, R, ? super P> factory) {
+        default Factory<T, R, P, FC> fallbackTo(final Factory<T, R, ? super P, FC> factory) {
             return parameters -> {
-                final Task<R, T> task = create(parameters);
+                final BrainNode<T, R, FC> task = create(parameters);
                 if (task != null) {
                     return task;
                 }
@@ -48,9 +49,9 @@ public interface TaskConfig<T> {
             };
         }
 
-        default Factory<T, R, P> fallbackFrom(final Factory<T, R, ? super P> factory) {
+        default Factory<T, R, P, FC> fallbackFrom(final Factory<T, R, ? super P, FC> factory) {
             return parameters -> {
-                final Task<R, T> task = factory.create(parameters);
+                final BrainNode<T, R, FC> task = factory.create(parameters);
                 if (task != null) {
                     return task;
                 }

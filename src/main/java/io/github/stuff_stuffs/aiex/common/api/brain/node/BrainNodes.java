@@ -5,6 +5,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryEntry;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -33,7 +34,7 @@ public final class BrainNodes {
             }
 
             @Override
-            public void deinit(BrainContext<C> context) {
+            public void deinit(final BrainContext<C> context) {
 
             }
         };
@@ -72,6 +73,15 @@ public final class BrainNodes {
         return node.adaptResult(res -> res.orElseThrow(errorFactory));
     }
 
+    public static <C, R, FC> BrainNode<C, R, FC> expectResult(final BrainNode<C, TaskTerminalBrainNode.Result<R>, FC> node, final Supplier<? extends RuntimeException> errorFactory) {
+        return node.adaptResult(res -> {
+            if (res instanceof TaskTerminalBrainNode.Failure<R>) {
+                throw errorFactory.get();
+            }
+            return ((TaskTerminalBrainNode.Success<R>) res).value();
+        });
+    }
+
     public static <C, R, FC> BrainNode<C, R, FC> orElse(final BrainNode<C, Optional<R>, FC> node, final R fallback) {
         return node.adaptResult(res -> res.orElse(fallback));
     }
@@ -98,7 +108,7 @@ public final class BrainNodes {
             }
 
             @Override
-            public void deinit(BrainContext<C> context) {
+            public void deinit(final BrainContext<C> context) {
                 start.deinit(context);
                 map.deinit(context);
             }

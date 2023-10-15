@@ -3,10 +3,11 @@ package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.entity.LivingEntity;
@@ -32,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
-public class DefaultUseItemTask<T extends LivingEntity> implements Task<BasicTasks.UseItem.Result, T> {
+public class DefaultUseItemTask<T extends LivingEntity> implements BrainNode<T, BasicTasks.UseItem.Result, BrainResourceRepository> {
     private final BasicTasks.UseItem.Parameters parameters;
     private final Hand hand;
     private boolean nextFinish = false;
@@ -45,7 +46,12 @@ public class DefaultUseItemTask<T extends LivingEntity> implements Task<BasicTas
     }
 
     @Override
-    public BasicTasks.UseItem.Result run(final BrainContext<T> context) {
+    public void init(final BrainContext<T> context) {
+
+    }
+
+    @Override
+    public BasicTasks.UseItem.Result tick(final BrainContext<T> context, final BrainResourceRepository arg) {
         if (handToken == null || !handToken.active()) {
             handToken = context.brain().resources().get(hand == Hand.MAIN_HAND ? BrainResource.MAIN_HAND_CONTROL : BrainResource.OFF_HAND_CONTROL).orElse(null);
             if (handToken == null) {
@@ -103,6 +109,22 @@ public class DefaultUseItemTask<T extends LivingEntity> implements Task<BasicTas
         }
         final TypedActionResult<ItemStack> use = stackInHand.use(context.world(), context.playerDelegate(), hand);
         return new BasicTasks.UseItem.Use(use.getResult(), use.getValue());
+    }
+
+    @Override
+    public void deinit(final BrainContext<T> context) {
+        if (handToken != null && handToken.active()) {
+            final T entity = context.entity();
+            if (entity.isUsingItem() && entity.getActiveHand() == hand) {
+                entity.stopUsingItem();
+            }
+            context.brain().resources().release(handToken);
+            handToken = null;
+        }
+        if (offHandToken != null && offHandToken.active()) {
+            context.brain().resources().release(offHandToken);
+            offHandToken = null;
+        }
     }
 
     private static <T extends LivingEntity> BasicTasks.UseItem.@Nullable Result tryEntity(final BrainContext<T> context, final BasicTasks.UseItem.Parameters parameters, final Hand hand, final double reachDistance) {
@@ -176,22 +198,6 @@ public class DefaultUseItemTask<T extends LivingEntity> implements Task<BasicTas
             } else {
                 return null;
             }
-        }
-    }
-
-    @Override
-    public void stop(final BrainContext<T> context) {
-        if (handToken != null && handToken.active()) {
-            final T entity = context.entity();
-            if (entity.isUsingItem() && entity.getActiveHand() == hand) {
-                entity.stopUsingItem();
-            }
-            context.brain().resources().release(handToken);
-            handToken = null;
-        }
-        if (offHandToken != null && offHandToken.active()) {
-            context.brain().resources().release(offHandToken);
-            offHandToken = null;
         }
     }
 }

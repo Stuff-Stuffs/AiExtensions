@@ -1,9 +1,9 @@
 package io.github.stuff_stuffs.aiex.common.api;
 
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfigurator;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.basic.*;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.EntityNavigator;
 import io.github.stuff_stuffs.aiex.common.api.entity.inventory.NpcInventory;
@@ -58,63 +58,63 @@ public final class AiExApi {
         new TaskConfigurator().add(Entity.class, (entity, builder, accessor) -> {
             final EntityNavigator navigator = AiExApi.ENTITY_NAVIGATOR.find(entity, null);
             if (navigator != null) {
-                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> basic = parameters -> new DefaultWalkTask(parameters.target(), parameters.maxError());
+                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> basic = parameters -> new DefaultWalkTask<>(parameters.target(), parameters.maxError());
                 if (accessor.has(BasicTasks.Walk.KEY)) {
-                    final TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> current = accessor.get(BasicTasks.Walk.KEY);
+                    final TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.Walk.KEY);
                     basic = current.fallbackTo(basic);
                 }
                 accessor.put(BasicTasks.Walk.KEY, basic);
             }
             if (builder.hasFactory(BasicTasks.Walk.KEY)) {
-                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters> basic = DefaultWalkTask::dynamic;
+                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters, BrainResourceRepository> basic = DefaultWalkTask::dynamic;
                 if (accessor.has(BasicTasks.Walk.DYNAMIC_KEY)) {
-                    final TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters> current = accessor.get(BasicTasks.Walk.DYNAMIC_KEY);
+                    final TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters, BrainResourceRepository> current = accessor.get(BasicTasks.Walk.DYNAMIC_KEY);
                     basic = current.fallbackTo(basic);
                 }
                 accessor.put(BasicTasks.Walk.DYNAMIC_KEY, basic);
             }
             if (builder.hasFactory(BasicTasks.Look.KEY)) {
-                TaskConfig.Factory<Entity, BasicTasks.Look.Result, BasicTasks.Look.EntityParameters> basic = parameters -> new DefaultEntityLookTask<>(parameters.entity(), parameters.type(), parameters.lookSpeed());
+                TaskConfig.Factory<Entity, BasicTasks.Look.Result, BasicTasks.Look.EntityParameters, BrainResourceRepository> basic = parameters -> new DefaultEntityLookTask<>(parameters.entity(), parameters.type(), parameters.lookSpeed());
                 if (builder.hasFactory(BasicTasks.Look.ENTITY_KEY)) {
-                    final TaskConfig.Factory<Entity, BasicTasks.Look.Result, BasicTasks.Look.EntityParameters> current = accessor.get(BasicTasks.Look.ENTITY_KEY);
+                    final TaskConfig.Factory<Entity, BasicTasks.Look.Result, BasicTasks.Look.EntityParameters, BrainResourceRepository> current = accessor.get(BasicTasks.Look.ENTITY_KEY);
                     basic = current.fallbackTo(basic);
                 }
                 accessor.put(BasicTasks.Look.ENTITY_KEY, basic);
             }
             if (builder.hasFactory(BasicTasks.Look.ENTITY_KEY)) {
-                TaskConfig.Factory<Entity, BasicTasks.Look.Result, BasicTasks.Look.EntityParameters> basic = DefaultEntityLookTask::dynamic;
+                TaskConfig.Factory<Entity, BasicTasks.Look.Result, BasicTasks.Look.EntityParameters, BrainResourceRepository> basic = DefaultEntityLookTask::dynamic;
                 if (accessor.has(BasicTasks.Look.ENTITY_DYNAMIC_KEY)) {
-                    final TaskConfig.Factory<Entity, BasicTasks.Look.Result, BasicTasks.Look.EntityParameters> current = accessor.get(BasicTasks.Look.ENTITY_DYNAMIC_KEY);
+                    final TaskConfig.Factory<Entity, BasicTasks.Look.Result, BasicTasks.Look.EntityParameters, BrainResourceRepository> current = accessor.get(BasicTasks.Look.ENTITY_DYNAMIC_KEY);
                     basic = current.fallbackTo(basic);
                 }
                 accessor.put(BasicTasks.Look.ENTITY_DYNAMIC_KEY, basic);
             }
         }).add(LivingEntity.class, (entity, builder, accessor) -> {
-            TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters> basic = parameters -> new DefaultLookTask(parameters.lookDir(), parameters.lookSpeed());
+            TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters, BrainResourceRepository> basic = parameters -> new DefaultLookTask<>(parameters.lookDir(), parameters.lookSpeed());
             if (accessor.has(BasicTasks.Look.KEY)) {
-                final TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters> current = accessor.get(BasicTasks.Look.KEY);
+                final TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.Look.KEY);
                 basic = current.fallbackTo(basic);
             }
             accessor.put(BasicTasks.Look.KEY, basic);
         }).add(LivingEntity.class, (entity, builder, accessor) -> {
-            TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters> basic = DefaultLookTask::dynamic;
+            TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters, BrainResourceRepository> basic = DefaultLookTask::dynamic;
             if (builder.hasFactory(BasicTasks.Look.DYNAMIC_KEY)) {
-                final TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters> current = accessor.get(BasicTasks.Look.DYNAMIC_KEY);
+                final TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.Look.DYNAMIC_KEY);
                 basic = current.fallbackTo(basic);
             }
             accessor.put(BasicTasks.Look.DYNAMIC_KEY, basic);
         }).add(LivingEntity.class, (entity, builder, accessor) -> {
-            TaskConfig.Factory<LivingEntity, BasicTasks.UseItem.Result, BasicTasks.UseItem.Parameters> basic = DefaultUseItemTask::new;
+            TaskConfig.Factory<LivingEntity, BasicTasks.UseItem.Result, BasicTasks.UseItem.Parameters, BrainResourceRepository> basic = DefaultUseItemTask::new;
             if (builder.hasFactory(BasicTasks.UseItem.KEY)) {
-                final TaskConfig.Factory<LivingEntity, BasicTasks.UseItem.Result, BasicTasks.UseItem.Parameters> current = accessor.get(BasicTasks.UseItem.KEY);
+                final TaskConfig.Factory<LivingEntity, BasicTasks.UseItem.Result, BasicTasks.UseItem.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.UseItem.KEY);
                 basic = current.fallbackTo(basic);
             }
             accessor.put(BasicTasks.UseItem.KEY, basic);
         }).add(Entity.class, (entity, builder, accessor) -> {
             if (NPC_INVENTORY.find(entity, null) != null) {
-                TaskConfig.Factory<Entity, BasicTasks.SwapStack.Result, BasicTasks.SwapStack.Parameters> basic = DefaultSwapStackTask::new;
+                TaskConfig.Factory<Entity, BasicTasks.SwapStack.Result, BasicTasks.SwapStack.Parameters, BrainResourceRepository> basic = DefaultSwapStackTask::new;
                 if (accessor.has(BasicTasks.SwapStack.KEY)) {
-                    final TaskConfig.Factory<Entity, BasicTasks.SwapStack.Result, BasicTasks.SwapStack.Parameters> current = accessor.get(BasicTasks.SwapStack.KEY);
+                    final TaskConfig.Factory<Entity, BasicTasks.SwapStack.Result, BasicTasks.SwapStack.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.SwapStack.KEY);
                     basic = current.fallbackTo(basic);
                 }
                 accessor.put(BasicTasks.SwapStack.KEY, basic);

@@ -5,9 +5,9 @@ import io.github.stuff_stuffs.aiex.common.api.brain.AiBrain;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
-import io.github.stuff_stuffs.aiex_test.common.basic.BasicBrainNodes;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
@@ -25,7 +25,7 @@ public class TestEntity extends AbstractNpcEntity {
 
     protected TestEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
-        final BrainNode<TestEntity, Unit, Unit> root = BasicBrainNodes.dodge();
+        final BrainNode<TestEntity, Unit, Unit> root = BrainNodes.empty();
         brain = AiBrain.create(this, root, BrainConfig.builder().build(), MemoryConfig.builder().build(this), TaskConfig.<TestEntity>builder().build(this));
         updateSlim();
     }

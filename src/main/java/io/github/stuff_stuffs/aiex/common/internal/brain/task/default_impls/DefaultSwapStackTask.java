@@ -2,10 +2,11 @@ package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 import io.github.stuff_stuffs.aiex.common.api.entity.inventory.NpcInventory;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleSlotStorage;
@@ -14,7 +15,7 @@ import net.minecraft.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("UnstableApiUsage")
-public class DefaultSwapStackTask<T extends Entity> implements Task<BasicTasks.SwapStack.Result, T> {
+public class DefaultSwapStackTask<T extends Entity> implements BrainNode<T, BasicTasks.SwapStack.Result, BrainResourceRepository> {
     private final BasicTasks.SwapStack.Parameters parameters;
     private @Nullable BrainResources.Token sourceToken = null;
     private @Nullable BrainResources.Token destinationToken = null;
@@ -24,19 +25,24 @@ public class DefaultSwapStackTask<T extends Entity> implements Task<BasicTasks.S
     }
 
     @Override
-    public BasicTasks.SwapStack.Result run(final BrainContext<T> context) {
+    public void init(final BrainContext<T> context) {
+
+    }
+
+    @Override
+    public BasicTasks.SwapStack.Result tick(final BrainContext<T> context, final BrainResourceRepository arg) {
         final NpcInventory inventory = AiExApi.NPC_INVENTORY.find(context.entity(), null);
         if (inventory == null) {
             throw new IllegalStateException();
         }
         if (sourceToken == null || !sourceToken.active()) {
-            sourceToken = context.brain().resources().get(parameters.source().map(BrainResource::ofInventorySlot, BrainResource::ofEquipmentSlot)).orElse(null);
+            sourceToken = arg.get(parameters.source().map(BrainResource::ofInventorySlot, BrainResource::ofEquipmentSlot)).orElse(null);
             if (sourceToken == null) {
                 return BasicTasks.SwapStack.Result.RESOURCE_ACQUISITION_ERROR;
             }
         }
         if (destinationToken == null || !destinationToken.active()) {
-            destinationToken = context.brain().resources().get(parameters.destination().map(BrainResource::ofInventorySlot, BrainResource::ofEquipmentSlot)).orElse(null);
+            destinationToken = arg.get(parameters.destination().map(BrainResource::ofInventorySlot, BrainResource::ofEquipmentSlot)).orElse(null);
             if (sourceToken == null) {
                 return BasicTasks.SwapStack.Result.RESOURCE_ACQUISITION_ERROR;
             }
@@ -59,7 +65,7 @@ public class DefaultSwapStackTask<T extends Entity> implements Task<BasicTasks.S
     }
 
     @Override
-    public void stop(final BrainContext<T> context) {
+    public void deinit(final BrainContext<T> context) {
         if (sourceToken == null || !sourceToken.active()) {
             context.brain().resources().release(sourceToken);
             sourceToken = null;

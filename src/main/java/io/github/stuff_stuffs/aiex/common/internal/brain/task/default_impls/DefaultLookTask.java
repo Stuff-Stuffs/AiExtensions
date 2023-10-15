@@ -1,12 +1,13 @@
 package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.ContextResetTask;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.Tasks;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -14,7 +15,9 @@ import org.apache.commons.lang3.mutable.MutableDouble;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.Nullable;
 
-public class DefaultLookTask implements Task<BasicTasks.Look.Result, LivingEntity> {
+import java.util.function.BiFunction;
+
+public class DefaultLookTask<T extends LivingEntity> implements BrainNode<T, BasicTasks.Look.Result, BrainResourceRepository> {
     private final Vec3d lookDir;
     private final double lookSpeed;
     private @Nullable BrainResources.Token headToken = null;
@@ -26,9 +29,14 @@ public class DefaultLookTask implements Task<BasicTasks.Look.Result, LivingEntit
     }
 
     @Override
-    public BasicTasks.Look.Result run(final BrainContext<LivingEntity> context) {
+    public void init(final BrainContext<T> context) {
+
+    }
+
+    @Override
+    public BasicTasks.Look.Result tick(final BrainContext<T> context, final BrainResourceRepository arg) {
         if (headToken == null || !headToken.active()) {
-            headToken = context.brain().resources().get(BrainResource.HEAD_CONTROL).orElse(null);
+            headToken = arg.get(BrainResource.HEAD_CONTROL).orElse(null);
             if (headToken == null) {
                 return BasicTasks.Look.Result.RESOURCE_ACQUISITION_ERROR;
             }
@@ -41,7 +49,7 @@ public class DefaultLookTask implements Task<BasicTasks.Look.Result, LivingEntit
         final float pitch = (float) MathHelper.wrapDegrees(Math.toDegrees(-Math.atan2(endLook.y, len)));
         if (MathHelper.angleBetween(headYaw, entity.getYaw()) > 60.0F) {
             if (bodyToken == null || !bodyToken.active()) {
-                bodyToken = context.brain().resources().get(BrainResource.BODY_CONTROL).orElse(null);
+                bodyToken = arg.get(BrainResource.BODY_CONTROL).orElse(null);
                 if (bodyToken == null) {
                     return BasicTasks.Look.Result.FAILED;
                 }
@@ -62,7 +70,7 @@ public class DefaultLookTask implements Task<BasicTasks.Look.Result, LivingEntit
             entity.setPitch(pitch);
             if (MathHelper.angleBetween(headYaw, entity.getYaw()) > 1.5F) {
                 if (bodyToken == null || !bodyToken.active()) {
-                    bodyToken = context.brain().resources().get(BrainResource.BODY_CONTROL).orElse(null);
+                    bodyToken = arg.get(BrainResource.BODY_CONTROL).orElse(null);
                 }
                 if (bodyToken != null && bodyToken.active()) {
                     final float bodyYaw;
@@ -85,7 +93,7 @@ public class DefaultLookTask implements Task<BasicTasks.Look.Result, LivingEntit
     }
 
     @Override
-    public void stop(final BrainContext<LivingEntity> context) {
+    public void deinit(final BrainContext<T> context) {
         if (headToken != null && headToken.active()) {
             context.brain().resources().release(headToken);
         }
@@ -111,10 +119,10 @@ public class DefaultLookTask implements Task<BasicTasks.Look.Result, LivingEntit
         return start.multiply(s1to / so).add(end.multiply(sto / so));
     }
 
-    public static Task<BasicTasks.Look.Result, LivingEntity> dynamic(final BasicTasks.Look.Parameters parameters) {
+    public static <T extends LivingEntity> BrainNode<T, BasicTasks.Look.Result, BrainResourceRepository> dynamic(final BasicTasks.Look.Parameters parameters) {
         final MutableObject<Vec3d> last = new MutableObject<>(parameters.lookDir().normalize());
         final MutableDouble lastSpeed = new MutableDouble(parameters.lookSpeed());
-        return Tasks.expect(new ContextResetTask<>(ctx -> ctx.createTask(BasicTasks.Look.KEY, parameters).orElse(null), ctx -> {
+        return BrainNodes.expectResult(new TaskTerminalBrainNode<>(BasicTasks.Look.KEY, (BiFunction<BrainResourceRepository, BrainContext<T>, BasicTasks.Look.Parameters>) (repository, context) -> parameters).resetOnContext((context, repository) -> {
             final Vec3d dir = parameters.lookDir().normalize();
             final double speed = parameters.lookSpeed();
             if (dir.dotProduct(last.getValue()) < 0.99 || Math.abs(speed - lastSpeed.doubleValue()) > 0.05) {

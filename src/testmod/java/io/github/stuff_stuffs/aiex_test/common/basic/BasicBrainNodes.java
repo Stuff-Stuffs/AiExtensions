@@ -51,24 +51,6 @@ public final class BasicBrainNodes {
         };
     }
 
-    public static <C> BrainNode<C, TaskTerminalBrainNode.Result<BasicTasks.Walk.Result>, Vec3d> walk(final TaskKey<BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> key, final double maxError) {
-        return walk(key, vec3d -> new BasicTasks.Walk.Parameters() {
-            @Override
-            public Vec3d target() {
-                return vec3d;
-            }
-
-            @Override
-            public double maxError() {
-                return maxError;
-            }
-        });
-    }
-
-    public static <C, FC> BrainNode<C, TaskTerminalBrainNode.Result<BasicTasks.Walk.Result>, FC> walk(final TaskKey<BasicTasks.Walk.Result, BasicTasks.Walk.Parameters> key, final Function<FC, BasicTasks.Walk.Parameters> parameterFactory) {
-        return new TaskTerminalBrainNode<>(key, (ctx, context) -> parameterFactory.apply(ctx));
-    }
-
     private static <C extends LivingEntity> Optional<Pair<DodgeKey, ToDoubleFunction<Vec3d>>> create(final List<ProjectileAvoidance.DangerScorer> scorers, final BrainContext<C> context, final Set<UUID> previous) {
         if (scorers.size() != previous.size()) {
             return Optional.empty();

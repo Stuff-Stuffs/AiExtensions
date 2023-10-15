@@ -45,17 +45,17 @@ public class TaskConfigurator {
     private static <T, K> void cast(final K entity, final TaskConfig.Builder<K> builder, final ConfiguratorEntry<T> entry) {
         entry.configure((T) entity, (TaskConfig.Builder<? extends T>) builder, new FactoryAccessor<>() {
             @Override
-            public <R, P> void put(final TaskKey<R, P> key, final TaskConfig.Factory<T, R, P> factory) {
-                builder.putFactory(key, (TaskConfig.Factory<K, R, P>) factory);
+            public <R, P, FC> void put(final TaskKey<R, P, FC> key, final TaskConfig.Factory<T, R, P, FC> factory) {
+                builder.putFactory(key, (TaskConfig.Factory<K, R, P, FC>) factory);
             }
 
             @Override
-            public <R, P> TaskConfig.Factory<T, R, P> get(final TaskKey<R, P> key) {
-                return (TaskConfig.Factory<T, R, P>) builder.getFactory(key);
+            public <R, P, FC> TaskConfig.Factory<T, R, P, FC> get(final TaskKey<R, P, FC> key) {
+                return (TaskConfig.Factory<T, R, P, FC>) builder.getFactory(key);
             }
 
             @Override
-            public boolean has(final TaskKey<?, ?> key) {
+            public boolean has(final TaskKey<?, ?, ?> key) {
                 return builder.hasFactory(key);
             }
         });
@@ -66,10 +66,10 @@ public class TaskConfigurator {
     }
 
     public interface FactoryAccessor<T> {
-        <R, P> void put(TaskKey<R, P> key, TaskConfig.Factory<T, R, P> factory);
+        <R, P, FC> void put(TaskKey<R, P, FC> key, TaskConfig.Factory<T, R, P, FC> factory);
 
-        <R, P> TaskConfig.Factory<T, R, P> get(TaskKey<R, P> key);
+        <R, P, FC> TaskConfig.Factory<T, R, P, FC> get(TaskKey<R, P, FC> key);
 
-        boolean has(TaskKey<?, ?> key);
+        boolean has(TaskKey<?, ?, ?> key);
     }
 }

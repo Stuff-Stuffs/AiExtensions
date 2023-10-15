@@ -12,7 +12,6 @@ import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryEntry;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
@@ -20,14 +19,12 @@ import io.github.stuff_stuffs.aiex.common.api.entity.AiFakePlayer;
 import io.github.stuff_stuffs.aiex.common.impl.brain.memory.MemoryEntryImpl;
 import io.github.stuff_stuffs.aiex.common.impl.brain.resource.AbstractBrainResourcesImpl;
 import io.github.stuff_stuffs.aiex.common.impl.brain.resource.BrainResourcesImpl;
-import io.github.stuff_stuffs.aiex.common.impl.brain.resource.DebugBrainResourcesImpl;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -59,7 +56,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
         handler = new EventHandler();
         memories = new MemoriesImpl(memoryConfig, this);
         this.taskConfig = taskConfig;
-        resources = (FabricLoader.getInstance().isDevelopmentEnvironment() ? new DebugBrainResourcesImpl() : new BrainResourcesImpl());
+        resources = new BrainResourcesImpl();
     }
 
     @Override
@@ -107,11 +104,11 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             }
 
             @Override
-            public <TR, P> Optional<Task<TR, T>> createTask(final TaskKey<TR, P> key, final P parameters) {
+            public <TR, P, FC> Optional<BrainNode<T, TR, FC>> createTask(final TaskKey<TR, P, FC> key, final P parameters) {
                 if (!taskConfig.hasFactory(key)) {
                     return Optional.empty();
                 }
-                final Task<TR, T> task = taskConfig.getFactory(key).create(parameters);
+                final BrainNode<T, TR, FC> task = taskConfig.getFactory(key).create(parameters);
                 return Optional.ofNullable(task);
             }
 

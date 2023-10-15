@@ -1,10 +1,11 @@
 package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.ContextResetTask;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.Tasks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.hit.BlockHitResult;
@@ -21,14 +22,15 @@ import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+import java.util.function.BiFunction;
 
-public class DefaultEntityLookTask<T extends Entity> implements Task<BasicTasks.Look.Result, T> {
+public class DefaultEntityLookTask<T extends Entity> implements BrainNode<T, BasicTasks.Look.Result, BrainResourceRepository> {
     private final Entity target;
     private final RaycastContext.ShapeType shapeType;
     private final double lookSpeed;
     private Vec3d lastEyePos;
     private Vec3d lastTargetPos;
-    private Task<BasicTasks.Look.Result, T> delegate = null;
+    private BrainNode<T, BasicTasks.Look.Result, BrainResourceRepository> delegate = null;
 
     public DefaultEntityLookTask(final Entity target, final RaycastContext.ShapeType type, final double speed) {
         this.target = target;
@@ -37,7 +39,12 @@ public class DefaultEntityLookTask<T extends Entity> implements Task<BasicTasks.
     }
 
     @Override
-    public BasicTasks.Look.Result run(final BrainContext<T> context) {
+    public void init(final BrainContext<T> context) {
+
+    }
+
+    @Override
+    public BasicTasks.Look.Result tick(final BrainContext<T> context, final BrainResourceRepository arg) {
         final T entity = context.entity();
         final Vec3d eyePos = entity.getPos().add(0, entity.getEyeHeight(entity.getPose()), 0);
         final Box box = target.getBoundingBox();
@@ -53,24 +60,24 @@ public class DefaultEntityLookTask<T extends Entity> implements Task<BasicTasks.
         if (lastEyePos == null || lastEyePos.squaredDistanceTo(eyePos) > 0.01) {
             lastEyePos = eyePos;
             if (delegate != null) {
-                delegate.stop(context);
+                delegate.deinit(context);
             }
             delegate = null;
         }
         if (lastTargetPos == null || lastTargetPos.squaredDistanceTo(otherEye) > 0.01) {
             lastTargetPos = otherEye;
             if (delegate != null) {
-                delegate.stop(context);
+                delegate.deinit(context);
             }
             delegate = null;
         }
         if (delegate == null) {
             final Vec3d target = computeTarget(eyePos, box, otherEye, context.world(), shapeType, context.entity(), context.randomSeed());
             if (target == null) {
-                delegate = Tasks.constant(BasicTasks.Look.Result.FAILED);
+                delegate = BrainNodes.constant(BasicTasks.Look.Result.FAILED);
             } else {
                 final Vec3d delta = target.subtract(eyePos);
-                final Optional<Task<BasicTasks.Look.Result, T>> task = context.createTask(BasicTasks.Look.KEY, new BasicTasks.Look.Parameters() {
+                final Optional<BrainNode<T, BasicTasks.Look.Result, BrainResourceRepository>> task = context.createTask(BasicTasks.Look.KEY, new BasicTasks.Look.Parameters() {
                     @Override
                     public Vec3d lookDir() {
                         return delta;
@@ -81,10 +88,17 @@ public class DefaultEntityLookTask<T extends Entity> implements Task<BasicTasks.
                         return lookSpeed;
                     }
                 });
-                delegate = task.orElseGet(() -> Tasks.constant(BasicTasks.Look.Result.FAILED));
+                delegate = task.orElseGet(() -> BrainNodes.constant(BasicTasks.Look.Result.FAILED));
             }
         }
-        return delegate.run(context);
+        return delegate.tick(context, arg);
+    }
+
+    @Override
+    public void deinit(final BrainContext<T> context) {
+        if (delegate != null) {
+            delegate.deinit(context);
+        }
     }
 
     public static @Nullable Vec3d computeTarget(final Vec3d eyePos, final Box box, final Vec3d otherEye, final World world, final RaycastContext.ShapeType type, final Entity entity, final long seed) {
@@ -125,18 +139,11 @@ public class DefaultEntityLookTask<T extends Entity> implements Task<BasicTasks.
         return v.squaredDistanceTo(x, y, z);
     }
 
-    @Override
-    public void stop(final BrainContext<T> context) {
-        if (delegate != null) {
-            delegate.stop(context);
-        }
-    }
-
-    public static Task<BasicTasks.Look.Result, Entity> dynamic(final BasicTasks.Look.EntityParameters parameters) {
+    public static <T extends Entity> BrainNode<T, BasicTasks.Look.Result, BrainResourceRepository> dynamic(final BasicTasks.Look.EntityParameters parameters) {
         final MutableObject<Entity> lastTarget = new MutableObject<>(parameters.entity());
         final MutableObject<RaycastContext.ShapeType> lastShapeType = new MutableObject<>(parameters.type());
         final MutableDouble lastLookSpeed = new MutableDouble(parameters.lookSpeed());
-        return Tasks.expect(new ContextResetTask<>(ctx -> ctx.createTask(BasicTasks.Look.ENTITY_KEY, parameters).orElse(null), context -> {
+        return BrainNodes.expectResult(new TaskTerminalBrainNode<>(BasicTasks.Look.ENTITY_KEY, (BiFunction<BrainResourceRepository, BrainContext<T>, BasicTasks.Look.EntityParameters>) (repository, context) -> parameters).resetOnContext((context, repository) -> {
             boolean reset = false;
             if (lastTarget.getValue() != parameters.entity()) {
                 reset = true;

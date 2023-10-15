@@ -2,11 +2,13 @@ package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.*;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.ContextResetTask;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.SelectorPairTask;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.entity.EntityNavigator;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
@@ -14,8 +16,9 @@ import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+import java.util.function.BiFunction;
 
-public class DefaultWalkTask implements Task<BasicTasks.Walk.Result, Entity> {
+public class DefaultWalkTask<T extends Entity> implements BrainNode<T, BasicTasks.Walk.Result, BrainResourceRepository> {
     private final Vec3d target;
     private final double maxError;
     private @Nullable BrainResources.Token token = null;
@@ -26,7 +29,11 @@ public class DefaultWalkTask implements Task<BasicTasks.Walk.Result, Entity> {
     }
 
     @Override
-    public BasicTasks.Walk.Result run(final BrainContext<Entity> context) {
+    public void init(final BrainContext<T> context) {
+    }
+
+    @Override
+    public BasicTasks.Walk.Result tick(final BrainContext<T> context, final BrainResourceRepository arg) {
         if (token == null || !token.active()) {
             final Optional<BrainResources.Token> token = context.brain().resources().get(BrainResource.BODY_CONTROL);
             if (token.isEmpty()) {
@@ -46,24 +53,22 @@ public class DefaultWalkTask implements Task<BasicTasks.Walk.Result, Entity> {
     }
 
     @Override
-    public void stop(final BrainContext<Entity> context) {
+    public void deinit(final BrainContext<T> context) {
         if (token != null && token.active()) {
             context.brain().resources().release(token);
         }
     }
 
-    public static Task<BasicTasks.Walk.Result, Entity> dynamic(final BasicTasks.Walk.DynamicParameters parameters) {
-        return Tasks.expect(new SelectorPairTask<>(context -> {
-            final MutableObject<Vec3d> last = new MutableObject<>(parameters.target());
-            return Tasks.expect(new ContextResetTask<>(ctx -> ctx.createTask(BasicTasks.Walk.KEY, parameters).orElse(null), ctx -> {
-                final double r = parameters.maxError() * 0.25;
-                final Vec3d current = parameters.target();
-                if (last.getValue().squaredDistanceTo(current) > r * r) {
-                    last.setValue(current);
-                    return true;
-                }
-                return false;
-            }), () -> new RuntimeException("Walk task factory error!"));
-        }, context -> Tasks.constant(BasicTasks.Walk.Result.DONE), ctx -> !parameters.shouldStop(), true), () -> new RuntimeException("wtf!"));
+    public static <T extends Entity> BrainNode<T, BasicTasks.Walk.Result, BrainResourceRepository> dynamic(final BasicTasks.Walk.DynamicParameters parameters) {
+        final MutableObject<Vec3d> last = new MutableObject<>(parameters.target());
+        return BrainNodes.expectResult(new TaskTerminalBrainNode<>(BasicTasks.Walk.KEY, (BiFunction<BrainResourceRepository, BrainContext<T>, BasicTasks.Walk.Parameters>) (repository, context) -> parameters).resetOnContext((context, repository) -> {
+            final double r = parameters.maxError() * 0.25;
+            final Vec3d current = parameters.target();
+            if (last.getValue().squaredDistanceTo(current) > r * r) {
+                last.setValue(current);
+                return true;
+            }
+            return false;
+        }), () -> new RuntimeException("No applicable task factory found!"));
     }
 }

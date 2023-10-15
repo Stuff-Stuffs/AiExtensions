@@ -1,6 +1,7 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
 import com.mojang.datafixers.util.Either;
+import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
@@ -14,13 +15,12 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.UUID;
 
 public final class BasicTasks {
     public static final class Walk {
-        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
-        public static final TaskKey<Result, DynamicParameters> DYNAMIC_KEY = new TaskKey<>(Result.class, DynamicParameters.class);
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
+        public static final TaskKey<Result, DynamicParameters, BrainResourceRepository> DYNAMIC_KEY = new TaskKey<>(Result.class, DynamicParameters.class, BrainResourceRepository.class);
 
         public enum Result {
             CONTINUE,
@@ -48,7 +48,7 @@ public final class BasicTasks {
     }
 
     public static final class Attack {
-        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
 
         public sealed interface Result {
         }
@@ -84,10 +84,10 @@ public final class BasicTasks {
     }
 
     public static final class Look {
-        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
-        public static final TaskKey<Result, Parameters> DYNAMIC_KEY = new TaskKey<>(Result.class, Parameters.class);
-        public static final TaskKey<Result, EntityParameters> ENTITY_KEY = new TaskKey<>(Result.class, EntityParameters.class);
-        public static final TaskKey<Result, EntityParameters> ENTITY_DYNAMIC_KEY = new TaskKey<>(Result.class, EntityParameters.class);
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> DYNAMIC_KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
+        public static final TaskKey<Result, EntityParameters, BrainResourceRepository> ENTITY_KEY = new TaskKey<>(Result.class, EntityParameters.class, BrainResourceRepository.class);
+        public static final TaskKey<Result, EntityParameters, BrainResourceRepository> ENTITY_DYNAMIC_KEY = new TaskKey<>(Result.class, EntityParameters.class, BrainResourceRepository.class);
 
         public enum Result {
             CONTINUE,
@@ -115,7 +115,7 @@ public final class BasicTasks {
     }
 
     public static final class UseItem {
-        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
 
         public sealed interface Result {
         }
@@ -165,7 +165,7 @@ public final class BasicTasks {
     }
 
     public static final class SwapStack {
-        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
 
         public enum Result {
             OK,
@@ -183,24 +183,6 @@ public final class BasicTasks {
         }
     }
 
-    public static final class ItemSelection {
-        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
-
-        public interface Parameters {
-            int count();
-
-            TaskKey<?, ?> key();
-
-            TaskKey<?, ?> forTask();
-        }
-
-        public record Result(List<Either<Integer, EquipmentSlot>> orderedItemSlots, int recommendedRefreshTicks) {
-        }
-
-        private ItemSelection() {
-        }
-    }
-
     public static void init() {
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_walk"), Walk.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_walk"), Walk.DYNAMIC_KEY);
@@ -211,7 +193,6 @@ public final class BasicTasks {
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_look_entity"), Look.ENTITY_DYNAMIC_KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_use_item"), UseItem.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("swap_stack"), SwapStack.KEY);
-        Registry.register(TaskKey.REGISTRY, AiExCommon.id("item_selection"), ItemSelection.KEY);
     }
 
     private BasicTasks() {
