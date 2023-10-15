@@ -68,7 +68,7 @@ public class EntityReferenceImpl implements EntityReference {
         if (key.isEmpty()) {
             return Optional.empty();
         }
-        compound.putString("type", key.get().toString());
+        compound.putString("type", key.get().getValue().toString());
         final NbtCompound data = new NbtCompound();
         for (final Map.Entry<EntityReferenceDataType<?, ?>, EntityReferenceData> entry : reference.data.entrySet()) {
             final Optional<NbtElement> result = EntityReferenceData.CODEC.encodeStart(NbtOps.INSTANCE, entry.getValue()).result();

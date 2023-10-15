@@ -1,7 +1,9 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
+import com.mojang.datafixers.util.Either;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registry;
@@ -12,6 +14,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.UUID;
 
 public final class BasicTasks {
@@ -161,6 +164,43 @@ public final class BasicTasks {
         }
     }
 
+    public static final class SwapStack {
+        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
+
+        public enum Result {
+            OK,
+            ERROR,
+            RESOURCE_ACQUISITION_ERROR
+        }
+
+        public interface Parameters {
+            Either<Integer, EquipmentSlot> source();
+
+            Either<Integer, EquipmentSlot> destination();
+        }
+
+        private SwapStack() {
+        }
+    }
+
+    public static final class ItemSelection {
+        public static final TaskKey<Result, Parameters> KEY = new TaskKey<>(Result.class, Parameters.class);
+
+        public interface Parameters {
+            int count();
+
+            TaskKey<?, ?> key();
+
+            TaskKey<?, ?> forTask();
+        }
+
+        public record Result(List<Either<Integer, EquipmentSlot>> orderedItemSlots, int recommendedRefreshTicks) {
+        }
+
+        private ItemSelection() {
+        }
+    }
+
     public static void init() {
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_walk"), Walk.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_walk"), Walk.DYNAMIC_KEY);
@@ -170,6 +210,8 @@ public final class BasicTasks {
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_look_entity"), Look.ENTITY_KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_look_entity"), Look.ENTITY_DYNAMIC_KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_use_item"), UseItem.KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("swap_stack"), SwapStack.KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("item_selection"), ItemSelection.KEY);
     }
 
     private BasicTasks() {

@@ -1,4 +1,4 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task.basic;
+package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
@@ -32,14 +32,14 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
-public class BasicUseItemTask<T extends LivingEntity> implements Task<BasicTasks.UseItem.Result, T> {
+public class DefaultUseItemTask<T extends LivingEntity> implements Task<BasicTasks.UseItem.Result, T> {
     private final BasicTasks.UseItem.Parameters parameters;
     private final Hand hand;
     private boolean nextFinish = false;
     private @Nullable BrainResources.Token handToken = null;
     private @Nullable BrainResources.Token offHandToken = null;
 
-    public BasicUseItemTask(final BasicTasks.UseItem.Parameters parameters) {
+    public DefaultUseItemTask(final BasicTasks.UseItem.Parameters parameters) {
         this.parameters = parameters;
         hand = parameters.hand();
     }
@@ -121,12 +121,12 @@ public class BasicUseItemTask<T extends LivingEntity> implements Task<BasicTasks
         } else {
             final BasicTasks.UseItem.EntityParameters entityParameters = (BasicTasks.UseItem.EntityParameters) parameters;
             final Box box = entityParameters.entity().getBoundingBox();
-            final double distSq = BasicEntityLookTask.distSqToBox(eyePos, box);
+            final double distSq = DefaultEntityLookTask.distSqToBox(eyePos, box);
             if (distSq > reachDistance * reachDistance) {
                 return null;
             } else {
                 final Vec3d otherEye = entityParameters.entity().getEyePos();
-                final Vec3d target = BasicEntityLookTask.computeTarget(eyePos, box, otherEye, context.world(), RaycastContext.ShapeType.OUTLINE, entity, context.brain().randomSeed());
+                final Vec3d target = DefaultEntityLookTask.computeTarget(eyePos, box, otherEye, context.world(), RaycastContext.ShapeType.OUTLINE, entity, context.randomSeed());
                 if (target == null) {
                     return null;
                 } else {

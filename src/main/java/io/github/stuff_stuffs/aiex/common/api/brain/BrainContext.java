@@ -19,4 +19,6 @@ public interface BrainContext<T> {
     AiFakePlayer playerDelegate();
 
     boolean hasPlayerDelegate();
+
+    long randomSeed();
 }

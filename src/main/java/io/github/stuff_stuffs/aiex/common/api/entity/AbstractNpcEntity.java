@@ -94,7 +94,7 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
         super.tick();
         cooldownManager.update();
         if (getEntityWorld() instanceof ServerWorld world && isAlive()) {
-            final AiBrain<?> brain = aiex$getBrain();
+            final AiBrain brain = aiex$getBrain();
             brain.tick();
             hungerManager.tick(this);
         }

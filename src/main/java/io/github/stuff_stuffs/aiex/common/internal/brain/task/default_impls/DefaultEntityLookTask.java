@@ -1,8 +1,8 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task.basic;
+package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.ContextResetTask;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.ContextResetTask;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.Tasks;
 import net.minecraft.entity.Entity;
@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
-public class BasicEntityLookTask<T extends Entity> implements Task<BasicTasks.Look.Result, T> {
+public class DefaultEntityLookTask<T extends Entity> implements Task<BasicTasks.Look.Result, T> {
     private final Entity target;
     private final RaycastContext.ShapeType shapeType;
     private final double lookSpeed;
@@ -30,7 +30,7 @@ public class BasicEntityLookTask<T extends Entity> implements Task<BasicTasks.Lo
     private Vec3d lastTargetPos;
     private Task<BasicTasks.Look.Result, T> delegate = null;
 
-    public BasicEntityLookTask(final Entity target, final RaycastContext.ShapeType type, final double speed) {
+    public DefaultEntityLookTask(final Entity target, final RaycastContext.ShapeType type, final double speed) {
         this.target = target;
         shapeType = type;
         lookSpeed = speed;
@@ -65,7 +65,7 @@ public class BasicEntityLookTask<T extends Entity> implements Task<BasicTasks.Lo
             delegate = null;
         }
         if (delegate == null) {
-            final Vec3d target = computeTarget(eyePos, box, otherEye, context.world(), shapeType, context.entity(), context.brain().randomSeed());
+            final Vec3d target = computeTarget(eyePos, box, otherEye, context.world(), shapeType, context.entity(), context.randomSeed());
             if (target == null) {
                 delegate = Tasks.constant(BasicTasks.Look.Result.FAILED);
             } else {

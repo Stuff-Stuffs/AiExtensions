@@ -1,6 +1,8 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.ContextResetTask;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.ResultResetTask;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder;
 import net.minecraft.registry.Registry;

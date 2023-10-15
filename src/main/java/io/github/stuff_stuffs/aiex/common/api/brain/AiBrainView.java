@@ -13,8 +13,6 @@ import java.util.stream.Stream;
 public interface AiBrainView {
     long age();
 
-    long randomSeed();
-
     BrainConfig config();
 
     Events events();

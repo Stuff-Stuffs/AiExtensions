@@ -1,6 +1,8 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task;
+package io.github.stuff_stuffs.aiex.common.api.brain.task.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;

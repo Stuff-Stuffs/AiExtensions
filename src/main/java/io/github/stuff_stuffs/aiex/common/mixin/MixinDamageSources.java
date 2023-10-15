@@ -23,8 +23,9 @@ public class MixinDamageSources {
     public Registry<DamageType> registry;
 
     @Inject(method = "create(Lnet/minecraft/registry/RegistryKey;Lnet/minecraft/entity/Entity;)Lnet/minecraft/entity/damage/DamageSource;", at = @At("HEAD"), cancellable = true)
-    private void createHook(RegistryKey<DamageType> key, @Nullable final Entity attacker, final CallbackInfoReturnable<DamageSource> cir) {
-        if (attacker instanceof AiFakePlayer) {
+    private void createHook(RegistryKey<DamageType> key, @Nullable Entity attacker, final CallbackInfoReturnable<DamageSource> cir) {
+        if (attacker instanceof AiFakePlayer fake) {
+            attacker = fake.getDelegate();
             if (key == DamageTypes.PLAYER_ATTACK) {
                 key = DamageTypes.MOB_ATTACK;
             }

@@ -95,8 +95,8 @@ public interface BrainNode<C, R, FC> {
         return new ContextResettingBrainNode<>(this, predicate);
     }
 
-    default BrainNode<C, Optional<R>, FC> latching(final Predicate<BrainContext<C>> hook, final BiPredicate<BrainContext<C>, R> unhook) {
-        return new LatchingBrainNode<>(hook, unhook, this);
+    default BrainNode<C, Optional<R>, FC> latching(final BiPredicate<BrainContext<C>, FC> hook) {
+        return new LatchingBrainNode<>(hook, this);
     }
 
     default <R0, R1> BrainNode<C, R1, FC> parallel(final BrainNode<C, R0, FC> node, final BiFunction<R, R0, R1> combiner) {

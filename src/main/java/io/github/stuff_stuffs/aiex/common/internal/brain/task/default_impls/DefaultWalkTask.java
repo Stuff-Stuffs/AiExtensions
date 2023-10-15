@@ -1,10 +1,12 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task.basic;
+package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.*;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.ContextResetTask;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.SelectorPairTask;
 import io.github.stuff_stuffs.aiex.common.api.entity.EntityNavigator;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
@@ -13,12 +15,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
-public class BasicWalkTask implements Task<BasicTasks.Walk.Result, Entity> {
+public class DefaultWalkTask implements Task<BasicTasks.Walk.Result, Entity> {
     private final Vec3d target;
     private final double maxError;
     private @Nullable BrainResources.Token token = null;
 
-    public BasicWalkTask(final Vec3d target, final double maxError) {
+    public DefaultWalkTask(final Vec3d target, final double maxError) {
         this.target = target;
         this.maxError = maxError;
     }

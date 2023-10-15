@@ -1,10 +1,10 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task.basic;
+package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.ContextResetTask;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.ContextResetTask;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.Tasks;
 import net.minecraft.entity.LivingEntity;
@@ -14,13 +14,13 @@ import org.apache.commons.lang3.mutable.MutableDouble;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.Nullable;
 
-public class BasicLookTask implements Task<BasicTasks.Look.Result, LivingEntity> {
+public class DefaultLookTask implements Task<BasicTasks.Look.Result, LivingEntity> {
     private final Vec3d lookDir;
     private final double lookSpeed;
     private @Nullable BrainResources.Token headToken = null;
     private @Nullable BrainResources.Token bodyToken = null;
 
-    public BasicLookTask(final Vec3d dir, final double speed) {
+    public DefaultLookTask(final Vec3d dir, final double speed) {
         lookDir = dir.normalize();
         lookSpeed = speed;
     }

@@ -1,9 +1,11 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.ParallelPairTask;
 
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public final class Tasks {
@@ -43,6 +45,36 @@ public final class Tasks {
 
     public static <R0, R1, C> Task<R1, C> dropFirst(final Task<R0, C> first, final Task<R1, C> second) {
         return dropSecond(second, first);
+    }
+
+    public static <R, C> Task<R, C> fallback(final Predicate<R> latch, final Task<R, C> first, final Task<R, C> fallback, final boolean semiParallel) {
+        return new Task<>() {
+            private boolean latched = false;
+
+            @Override
+            public R run(final BrainContext<C> context) {
+                if (latched) {
+                    return fallback.run(context);
+                }
+                final R res = first.run(context);
+                if (latch.test(res)) {
+                    latched = true;
+                    first.stop(context);
+                    if (semiParallel) {
+                        return fallback.run(context);
+                    }
+                }
+                return res;
+            }
+
+            @Override
+            public void stop(final BrainContext<C> context) {
+                if (latched) {
+                    first.stop(context);
+                }
+                fallback.stop(context);
+            }
+        };
     }
 
     private Tasks() {

@@ -1,6 +1,7 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task;
+package io.github.stuff_stuffs.aiex.common.api.brain.task.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 import org.apache.commons.lang3.function.TriFunction;
 
 public class ParallelPairTask<R, R0, R1, C> implements Task<R, C> {

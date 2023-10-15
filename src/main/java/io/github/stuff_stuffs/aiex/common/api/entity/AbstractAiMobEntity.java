@@ -1,10 +1,12 @@
 package io.github.stuff_stuffs.aiex.common.api.entity;
 
 import com.mojang.serialization.Dynamic;
+import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.DamagedBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.ObservedEntityBrainEvent;
+import io.github.stuff_stuffs.aiex.common.api.brain.event.ObservedProjectileEntityBrainEvent;
 import io.github.stuff_stuffs.aiex.common.internal.entity.DummyBrain;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.entity.Entity;
@@ -16,16 +18,20 @@ import net.minecraft.entity.ai.control.JumpControl;
 import net.minecraft.entity.ai.control.LookControl;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity {
     public static final int VISION_POLLING_RATE = 15;
@@ -72,6 +78,7 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
     public void tick() {
         super.tick();
         if (getEntityWorld() instanceof ServerWorld world) {
+            updateProjectileVision();
             final double range = observableEntityRange();
             final Box box = Box.of(getPos(), range * 2, range * 2, range * 2);
             final List<? extends Entity> list = world.getEntitiesByClass(observableEntityClass(), box, entity -> entity.isAlive() && !entity.isSpectator());
@@ -96,6 +103,28 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
                     brainEvents.streamQuery(AiBrainEventTypes.OBSERVED_ENTITY, oldest).takeWhile(event -> event.timestamp() <= youngest).forEach(brainEvents::forget);
                     brainEvents.remember(ObservedEntityBrainEvent.create(entity, brainAge));
                 }
+            }
+        }
+    }
+
+    protected void updateProjectileVision() {
+        final ServerWorld world = (ServerWorld) getEntityWorld();
+        final double range = observableEntityRange();
+        final Box box = Box.of(getPos(), range * 2, range * 2, range * 2);
+        final List<Entity> list = world.getOtherEntities(this, box);
+        final AiBrainView brainView = aiex$getBrain();
+        final AiBrainView.Events brainEvents = brainView.events();
+        final long oldest = -1;
+        final Map<UUID, List<ObservedProjectileEntityBrainEvent>> events = brainEvents.query(AiBrainEventTypes.OBSERVED_PROJECTILE_ENTITY, oldest).stream().collect(Collectors.groupingBy(ObservedEntityBrainEvent::targetUuid));
+        for (final Entity entity : list) {
+            if (Registries.ENTITY_TYPE.getEntry(entity.getType()).isIn(AiExApi.PROJECTILE_ENTITY_TAG) || entity instanceof ProjectileEntity) {
+                final List<ObservedProjectileEntityBrainEvent> eventList = events.get(entity.getUuid());
+                if (eventList != null) {
+                    for (final ObservedProjectileEntityBrainEvent event : eventList) {
+                        brainEvents.forget(event);
+                    }
+                }
+                brainEvents.remember(ObservedProjectileEntityBrainEvent.create(brainView, entity));
             }
         }
     }

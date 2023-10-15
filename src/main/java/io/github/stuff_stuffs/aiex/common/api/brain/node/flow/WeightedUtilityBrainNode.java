@@ -28,7 +28,7 @@ public class WeightedUtilityBrainNode<C, R, FC> extends UtilityBrainNode<C, R, F
             weights[i] = weight;
             sum = sum + weight;
         }
-        final Random random = new Xoroshiro128PlusPlusRandom(context.brain().randomSeed());
+        final Random random = new Xoroshiro128PlusPlusRandom(context.randomSeed());
         final double splice = random.nextDouble() * sum;
         double runningTotal = 0;
         for (int i = 0; i < size; i++) {

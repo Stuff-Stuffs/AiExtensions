@@ -1,6 +1,7 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.flow.WhileTask;
 
 import java.util.Optional;
 import java.util.function.BiFunction;

@@ -9,14 +9,14 @@ import io.github.stuff_stuffs.aiex.common.impl.brain.AiBrainImpl;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
 
-public interface AiBrain<T> extends AiBrainView {
+public interface AiBrain extends AiBrainView {
     void tick();
 
     void writeNbt(NbtCompound nbt);
 
     void readNbt(NbtCompound nbt);
 
-    static <T extends Entity> AiBrain<T> create(final T entity, final BrainNode<T, Unit, Unit> root, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig) {
-        return new AiBrainImpl<>(entity, root, config, memoryConfig, taskConfig);
+    static <T extends Entity> AiBrain create(final T entity, final BrainNode<T, Unit, Unit> root, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig) {
+        return new AiBrainImpl<>(entity, root, config, memoryConfig, taskConfig, entity.getEntityWorld().random.nextLong());
     }
 }

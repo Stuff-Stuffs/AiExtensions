@@ -37,6 +37,11 @@ public class BrainResourcesImpl extends AbstractBrainResourcesImpl implements Br
     public void tick() {
     }
 
+    @Override
+    public void clear() {
+        resourceCounts.clear();
+    }
+
     private static final class TokenImpl implements Token {
         private final BrainResource resource;
         private boolean active = true;

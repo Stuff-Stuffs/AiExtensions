@@ -31,7 +31,7 @@ public class TaskConfigurator {
             @Override
             public <T> void onBuild(final T entity, final TaskConfig.Builder<T> builder) {
                 for (final Map.Entry<Class<?>, List<ConfiguratorEntry<?>>> entry : configurators.entrySet()) {
-                    if (entry.getKey().isInstance(entry)) {
+                    if (entry.getKey().isInstance(entity)) {
                         for (final ConfiguratorEntry<?> configuratorEntry : entry.getValue()) {
                             cast(entity, builder, configuratorEntry);
                         }

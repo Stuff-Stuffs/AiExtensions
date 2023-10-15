@@ -1,6 +1,7 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task;
+package io.github.stuff_stuffs.aiex.common.api.brain.task.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.Task;
 
 import java.util.Optional;
 import java.util.function.Predicate;

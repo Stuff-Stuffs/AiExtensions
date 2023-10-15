@@ -48,6 +48,11 @@ public class DebugBrainResourcesImpl extends AbstractBrainResourcesImpl implemen
         }
     }
 
+    @Override
+    public void clear() {
+        resourceCounts.clear();
+    }
+
     private static final class TokenRef extends WeakReference<Token> {
         private final BrainResource resource;
         private boolean active;
