@@ -20,7 +20,7 @@ public class ObservedProjectileEntityBrainEvent extends ObservedEntityBrainEvent
     private final Vec3d velocity;
     private final boolean gravity;
 
-    public ObservedProjectileEntityBrainEvent(final UUID uuid, final Vec3d position, final long timestamp, final Vec3d velocity, final boolean gravity) {
+    protected ObservedProjectileEntityBrainEvent(final UUID uuid, final Vec3d position, final long timestamp, final Vec3d velocity, final boolean gravity) {
         super(uuid, position, timestamp);
         this.velocity = velocity;
         this.gravity = gravity;

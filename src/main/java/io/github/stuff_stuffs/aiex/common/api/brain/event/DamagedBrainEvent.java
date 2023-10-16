@@ -19,8 +19,8 @@ public class DamagedBrainEvent implements AiBrainEvent {
             instance.group(
                     Codec.FLOAT.fieldOf("amount").forGetter(DamagedBrainEvent::amount),
                     Vec3d.CODEC.optionalFieldOf("position").forGetter(DamagedBrainEvent::position),
-                    Uuids.STRING_CODEC.optionalFieldOf("attacker").forGetter(i -> i.attacker),
-                    Uuids.STRING_CODEC.optionalFieldOf("source").forGetter(i -> i.source)
+                    Uuids.STRING_CODEC.optionalFieldOf("attacker").forGetter(DamagedBrainEvent::attackerUuid),
+                    Uuids.STRING_CODEC.optionalFieldOf("source").forGetter(DamagedBrainEvent::sourceUuid)
             ).apply(instance, DamagedBrainEvent::new)
     );
     private final float amount;
