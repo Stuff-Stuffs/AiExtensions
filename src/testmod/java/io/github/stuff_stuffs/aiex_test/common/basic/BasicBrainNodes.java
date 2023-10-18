@@ -4,9 +4,7 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import io.github.stuff_stuffs.aiex.common.api.util.avoidance.ProjectileAvoidance;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.entity.Entity;
@@ -24,19 +22,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 
 public final class BasicBrainNodes {
     public static <C extends Entity> BrainNode<C, Optional<Vec3d>, Unit> nearestPlayer() {
         return new BrainNode<>() {
             @Override
-            public void init(final BrainContext<C> context) {
+            public void init(final BrainContext<C> context, SpannedLogger logger) {
 
             }
 
             @Override
-            public Optional<Vec3d> tick(final BrainContext<C> context, final Unit arg) {
+            public Optional<Vec3d> tick(final BrainContext<C> context, final Unit arg, SpannedLogger logger) {
                 final PlayerEntity player = context.entity().getEntityWorld().getClosestPlayer(context.entity(), 128.0);
                 if (player != null) {
                     return Optional.of(player.getPos());
@@ -45,7 +42,7 @@ public final class BasicBrainNodes {
             }
 
             @Override
-            public void deinit(final BrainContext<C> context) {
+            public void deinit(final BrainContext<C> context, SpannedLogger logger) {
 
             }
         };

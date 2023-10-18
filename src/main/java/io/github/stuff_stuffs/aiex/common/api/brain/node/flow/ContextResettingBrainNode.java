@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.function.BiPredicate;
 
@@ -15,21 +16,28 @@ public class ContextResettingBrainNode<C, R, FC> implements BrainNode<C, R, FC> 
     }
 
     @Override
-    public void init(final BrainContext<C> context) {
-        node.init(context);
-    }
-
-    @Override
-    public R tick(final BrainContext<C> context, final FC arg) {
-        if (reset.test(context, arg)) {
-            node.deinit(context);
-            node.init(context);
+    public void init(final BrainContext<C> context, final SpannedLogger logger) {
+        try (final var child = logger.open("ContextReset")) {
+            node.init(context, child);
         }
-        return node.tick(context, arg);
     }
 
     @Override
-    public void deinit(BrainContext<C> context) {
-        node.deinit(context);
+    public R tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
+        try (final var child = logger.open("ContextReset")) {
+            if (reset.test(context, arg)) {
+                child.debug("Resetting");
+                node.deinit(context, child);
+                node.init(context, child);
+            }
+            return node.tick(context, arg, child);
+        }
+    }
+
+    @Override
+    public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
+        try (final var child = logger.open("ContextReset")) {
+            node.deinit(context, child);
+        }
     }
 }

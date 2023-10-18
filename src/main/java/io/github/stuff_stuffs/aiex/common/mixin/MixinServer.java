@@ -35,4 +35,9 @@ public class MixinServer implements InternalServerExtensions {
     private void loadHook(final CallbackInfo ci) {
         aiex$entityRefContainer.load(session);
     }
+
+    @Override
+    public LevelStorage.Session aiex$session() {
+        return session;
+    }
 }

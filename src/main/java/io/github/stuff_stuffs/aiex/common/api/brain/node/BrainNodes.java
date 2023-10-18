@@ -5,7 +5,8 @@ import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryEntry;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -24,17 +25,17 @@ public final class BrainNodes {
     public static <C, R, FC> BrainNode<C, R, FC> terminal(final BiFunction<BrainContext<C>, FC, R> func) {
         return new BrainNode<>() {
             @Override
-            public void init(final BrainContext<C> context) {
+            public void init(final BrainContext<C> context, final SpannedLogger logger) {
 
             }
 
             @Override
-            public R tick(final BrainContext<C> context, final FC arg) {
+            public R tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
                 return func.apply(context, arg);
             }
 
             @Override
-            public void deinit(final BrainContext<C> context) {
+            public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
 
             }
         };
@@ -73,12 +74,12 @@ public final class BrainNodes {
         return node.adaptResult(res -> res.orElseThrow(errorFactory));
     }
 
-    public static <C, R, FC> BrainNode<C, R, FC> expectResult(final BrainNode<C, TaskTerminalBrainNode.Result<R>, FC> node, final Supplier<? extends RuntimeException> errorFactory) {
+    public static <C, R, FC> BrainNode<C, R, FC> expectResult(final BrainNode<C, TaskBrainNode.Result<R>, FC> node, final Supplier<? extends RuntimeException> errorFactory) {
         return node.adaptResult(res -> {
-            if (res instanceof TaskTerminalBrainNode.Failure<R>) {
+            if (res instanceof TaskBrainNode.Failure<R>) {
                 throw errorFactory.get();
             }
-            return ((TaskTerminalBrainNode.Success<R>) res).value();
+            return ((TaskBrainNode.Success<R>) res).value();
         });
     }
 
@@ -97,20 +98,44 @@ public final class BrainNodes {
     public static <C, R, FC0, FC1> BrainNode<C, Optional<R>, FC0> flatMap(final BrainNode<C, Optional<FC1>, FC0> start, final BrainNode<C, Optional<R>, FC1> map) {
         return new BrainNode<>() {
             @Override
-            public void init(final BrainContext<C> context) {
-                start.init(context);
-                map.init(context);
+            public void init(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final var child = logger.open("flatmapped")) {
+                    try (final var log = child.open("from")) {
+                        start.init(context, log);
+                    }
+                    try (final var log = child.open("to")) {
+                        map.init(context, log);
+                    }
+                }
             }
 
             @Override
-            public Optional<R> tick(final BrainContext<C> context, final FC0 arg) {
-                return start.tick(context, arg).flatMap(val -> map.tick(context, val));
+            public Optional<R> tick(final BrainContext<C> context, final FC0 arg, final SpannedLogger logger) {
+                try (final var child = logger.open("flatmapped")) {
+                    final Optional<FC1> opt;
+                    try (final var log = child.open("from")) {
+                        opt = start.tick(context, arg, log);
+                    }
+                    if (opt.isEmpty()) {
+                        logger.debug("Empty!");
+                        return Optional.empty();
+                    }
+                    try (final var log = child.open("to")) {
+                        return map.tick(context, opt.get(), log);
+                    }
+                }
             }
 
             @Override
-            public void deinit(final BrainContext<C> context) {
-                start.deinit(context);
-                map.deinit(context);
+            public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final var child = logger.open("flatmapped")) {
+                    try (final var log = child.open("from")) {
+                        start.deinit(context, log);
+                    }
+                    try (final var log = child.open("to")) {
+                        map.deinit(context, log);
+                    }
+                }
             }
         };
     }

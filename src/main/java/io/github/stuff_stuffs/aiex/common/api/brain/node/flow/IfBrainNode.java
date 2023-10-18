@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import net.fabricmc.fabric.api.util.TriState;
 
 import java.util.function.BiPredicate;
@@ -25,51 +26,80 @@ public class IfBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
     }
 
     @Override
-    public void init(final BrainContext<C> context) {
+    public void init(final BrainContext<C> context, final SpannedLogger logger) {
         prev = TriState.DEFAULT;
+        try (final var child = logger.open("If[dynamic=" + dynamic + "]")) {
+        }
     }
 
     @Override
-    public R tick(final BrainContext<C> context, final FC arg) {
-        final boolean res;
-        if (dynamic) {
-            res = predicate.test(context, arg);
-            if (prev != TriState.DEFAULT) {
-                if (res ^ prev.get()) {
+    public R tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
+        try (final var child = logger.open("If[dynamic=" + dynamic + "]")) {
+            final boolean res;
+            if (dynamic) {
+                res = predicate.test(context, arg);
+                if (prev != TriState.DEFAULT && res != prev.get()) {
+                    child.debug("Resetting, new value=" + res);
+                    if (res ^ prev.get()) {
+                        if (res) {
+                            child.debug("Setting up true branch");
+                            trueBranch.init(context, child);
+                            child.debug("Tearing down false branch");
+                            falseBranch.deinit(context, child);
+                        } else {
+                            child.debug("Setting up false branch");
+                            falseBranch.init(context, child);
+                            child.debug("Tearing down true branch");
+                            trueBranch.deinit(context, child);
+                        }
+                    }
+                } else if (prev == TriState.DEFAULT) {
                     if (res) {
-                        falseBranch.deinit(context);
-                        trueBranch.init(context);
+                        child.debug("Setting up true branch");
+                        trueBranch.init(context, child);
                     } else {
-                        trueBranch.deinit(context);
-                        falseBranch.init(context);
+                        child.debug("Setting up false branch");
+                        falseBranch.init(context, child);
                     }
                 }
-            } else {
-                if (res) {
-                    trueBranch.init(context);
-                } else {
-                    falseBranch.init(context);
-                }
-            }
-            prev = TriState.of(res);
-        } else {
-            if (prev == TriState.DEFAULT) {
-                res = predicate.test(context, arg);
                 prev = TriState.of(res);
             } else {
-                res = prev.get();
+                if (prev == TriState.DEFAULT) {
+                    res = predicate.test(context, arg);
+                    prev = TriState.of(res);
+                    child.debug("Setting value=" + res);
+                    if (res) {
+                        trueBranch.init(context, child);
+                    } else {
+                        falseBranch.init(context, child);
+                    }
+                } else {
+                    res = prev.get();
+                }
+            }
+            if (res) {
+                child.debug("Going true branch!");
+                return trueBranch.tick(context, arg, child);
+            } else {
+                child.debug("Going false branch!");
+                return falseBranch.tick(context, arg, child);
             }
         }
-        return (res ? trueBranch : falseBranch).tick(context, arg);
     }
 
     @Override
-    public void deinit(BrainContext<C> context) {
-        if (prev == TriState.TRUE) {
-            trueBranch.deinit(context);
-        } else if (prev == TriState.FALSE) {
-            falseBranch.deinit(context);
+    public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
+        try (final var child = logger.open("If[dynamic=" + dynamic + "]")) {
+            if (prev == TriState.TRUE) {
+                try (final var tLogger = child.open("trueBranch")) {
+                    trueBranch.deinit(context, tLogger);
+                }
+            } else if (prev == TriState.FALSE) {
+                try (final var fLogger = child.open("falseBranch")) {
+                    falseBranch.deinit(context, fLogger);
+                }
+            }
+            prev = TriState.DEFAULT;
         }
-        prev = TriState.DEFAULT;
     }
 }

@@ -8,6 +8,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
 import net.minecraft.entity.LivingEntity;
@@ -46,84 +47,96 @@ public class DefaultUseItemTask<T extends LivingEntity> implements BrainNode<T, 
     }
 
     @Override
-    public void init(final BrainContext<T> context) {
+    public void init(final BrainContext<T> context, final SpannedLogger logger) {
 
     }
 
     @Override
-    public BasicTasks.UseItem.Result tick(final BrainContext<T> context, final BrainResourceRepository arg) {
-        if (handToken == null || !handToken.active()) {
-            handToken = context.brain().resources().get(hand == Hand.MAIN_HAND ? BrainResource.MAIN_HAND_CONTROL : BrainResource.OFF_HAND_CONTROL).orElse(null);
-            if (handToken == null) {
-                return new BasicTasks.UseItem.ResourceAcquisitionError();
+    public BasicTasks.UseItem.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, final SpannedLogger logger) {
+        try (final var l = logger.open("DefaultUseItemImpl")) {
+            if (handToken == null || !handToken.active()) {
+                l.debug("Trying to acquire hand token");
+                handToken = context.brain().resources().get(hand == Hand.MAIN_HAND ? BrainResource.MAIN_HAND_CONTROL : BrainResource.OFF_HAND_CONTROL).orElse(null);
+                if (handToken == null) {
+                    l.debug("Failed!");
+                    return new BasicTasks.UseItem.ResourceAcquisitionError();
+                }
+                l.debug("Success");
             }
-        }
-        final T entity = context.entity();
-        if (entity.getActiveHand() != hand && entity.isUsingItem()) {
-            return new BasicTasks.UseItem.UsingOtherHandError();
-        } else if (entity.isUsingItem()) {
-            if (nextFinish) {
-                return new BasicTasks.UseItem.Finished(entity.getStackInHand(hand));
+            final T entity = context.entity();
+            if (entity.getActiveHand() != hand && entity.isUsingItem()) {
+                return new BasicTasks.UseItem.UsingOtherHandError();
+            } else if (entity.isUsingItem()) {
+                if (nextFinish) {
+                    return new BasicTasks.UseItem.Finished(entity.getStackInHand(hand));
+                }
+                return new BasicTasks.UseItem.UseTick(entity.getItemUseTime(), entity.getItemUseTimeLeft());
             }
-            return new BasicTasks.UseItem.UseTick(entity.getItemUseTime(), entity.getItemUseTimeLeft());
-        }
-        final int timeLeft = entity.getItemUseTimeLeft();
-        if (timeLeft != 0) {
-            if (timeLeft == 1) {
-                nextFinish = true;
+            final int timeLeft = entity.getItemUseTimeLeft();
+            if (timeLeft != 0) {
+                if (timeLeft == 1) {
+                    nextFinish = true;
+                }
+                return new BasicTasks.UseItem.UseTick(entity.getItemUseTime(), timeLeft);
             }
-            return new BasicTasks.UseItem.UseTick(entity.getItemUseTime(), timeLeft);
-        }
-        final ItemStack stackInHand = entity.getStackInHand(hand);
-        final ItemCooldownManager cooldownManager = AiExApi.COOLDOWN_MANAGER.find(entity, null);
-        if (cooldownManager != null) {
-            if (cooldownManager.isCoolingDown(stackInHand.getItem())) {
-                return new BasicTasks.UseItem.CooldownWait(cooldownManager.getCooldownProgress(stackInHand.getItem(), 0.0F));
-            }
-        }
-        final UseAction action = stackInHand.getUseAction();
-        if (action == UseAction.BLOCK || action == UseAction.BOW || action == UseAction.CROSSBOW || action == UseAction.SPYGLASS) {
-            if (offHandToken == null || !offHandToken.active()) {
-                offHandToken = context.brain().resources().get(hand != Hand.MAIN_HAND ? BrainResource.MAIN_HAND_CONTROL : BrainResource.OFF_HAND_CONTROL).orElse(null);
-                if (offHandToken == null) {
-                    return new BasicTasks.UseItem.UsingOtherHandError();
+            final ItemStack stackInHand = entity.getStackInHand(hand);
+            final ItemCooldownManager cooldownManager = AiExApi.COOLDOWN_MANAGER.find(entity, null);
+            if (cooldownManager != null) {
+                if (cooldownManager.isCoolingDown(stackInHand.getItem())) {
+                    return new BasicTasks.UseItem.CooldownWait(cooldownManager.getCooldownProgress(stackInHand.getItem(), 0.0F));
                 }
             }
-        }
-        final double reachDistance = context.brain().config().get(BrainConfig.DEFAULT_REACH_DISTANCE);
-        if (parameters instanceof BasicTasks.UseItem.AutoParameters || parameters instanceof BasicTasks.UseItem.EntityParameters) {
-            final BasicTasks.UseItem.Result result = tryEntity(context, parameters, hand, reachDistance);
-            if (result != null) {
-                return result;
-            } else if (parameters instanceof BasicTasks.UseItem.EntityParameters) {
-                return new BasicTasks.UseItem.Miss();
+            final UseAction action = stackInHand.getUseAction();
+            if (action == UseAction.BLOCK || action == UseAction.BOW || action == UseAction.CROSSBOW || action == UseAction.SPYGLASS) {
+                if (offHandToken == null || !offHandToken.active()) {
+                    l.debug("Trying to acquire off-hand token");
+                    offHandToken = context.brain().resources().get(hand != Hand.MAIN_HAND ? BrainResource.MAIN_HAND_CONTROL : BrainResource.OFF_HAND_CONTROL).orElse(null);
+                    if (offHandToken == null) {
+                        l.debug("Failed!");
+                        return new BasicTasks.UseItem.UsingOtherHandError();
+                    }
+                    l.debug("Success");
+                }
             }
-        }
-        if (parameters instanceof BasicTasks.UseItem.AutoParameters || parameters instanceof BasicTasks.UseItem.BlockParameters) {
-            final BasicTasks.UseItem.Result result = tryBlock(context, parameters, hand, reachDistance);
-            if (result != null) {
-                return result;
-            } else if (parameters instanceof BasicTasks.UseItem.BlockParameters) {
-                return new BasicTasks.UseItem.Miss();
+            final double reachDistance = context.brain().config().get(BrainConfig.DEFAULT_REACH_DISTANCE);
+            if (parameters instanceof BasicTasks.UseItem.AutoParameters || parameters instanceof BasicTasks.UseItem.EntityParameters) {
+                final BasicTasks.UseItem.Result result = tryEntity(context, parameters, hand, reachDistance);
+                if (result != null) {
+                    return result;
+                } else if (parameters instanceof BasicTasks.UseItem.EntityParameters) {
+                    return new BasicTasks.UseItem.Miss();
+                }
             }
+            if (parameters instanceof BasicTasks.UseItem.AutoParameters || parameters instanceof BasicTasks.UseItem.BlockParameters) {
+                final BasicTasks.UseItem.Result result = tryBlock(context, parameters, hand, reachDistance);
+                if (result != null) {
+                    return result;
+                } else if (parameters instanceof BasicTasks.UseItem.BlockParameters) {
+                    return new BasicTasks.UseItem.Miss();
+                }
+            }
+            final TypedActionResult<ItemStack> use = stackInHand.use(context.world(), context.playerDelegate(), hand);
+            return new BasicTasks.UseItem.Use(use.getResult(), use.getValue());
         }
-        final TypedActionResult<ItemStack> use = stackInHand.use(context.world(), context.playerDelegate(), hand);
-        return new BasicTasks.UseItem.Use(use.getResult(), use.getValue());
     }
 
     @Override
-    public void deinit(final BrainContext<T> context) {
-        if (handToken != null && handToken.active()) {
-            final T entity = context.entity();
-            if (entity.isUsingItem() && entity.getActiveHand() == hand) {
-                entity.stopUsingItem();
+    public void deinit(final BrainContext<T> context, final SpannedLogger logger) {
+        try (final var l = logger.open("DefaultUseItemImpl")) {
+            if (handToken != null && handToken.active()) {
+                final T entity = context.entity();
+                if (entity.isUsingItem() && entity.getActiveHand() == hand) {
+                    entity.stopUsingItem();
+                }
+                context.brain().resources().release(handToken);
+                handToken = null;
+                l.debug("Releasing hand token");
             }
-            context.brain().resources().release(handToken);
-            handToken = null;
-        }
-        if (offHandToken != null && offHandToken.active()) {
-            context.brain().resources().release(offHandToken);
-            offHandToken = null;
+            if (offHandToken != null && offHandToken.active()) {
+                context.brain().resources().release(offHandToken);
+                offHandToken = null;
+                l.debug("Releasing off-hand token");
+            }
         }
     }
 

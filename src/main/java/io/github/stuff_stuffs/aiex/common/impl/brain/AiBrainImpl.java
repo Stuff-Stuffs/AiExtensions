@@ -16,6 +16,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiFakePlayer;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import io.github.stuff_stuffs.aiex.common.impl.brain.memory.MemoryEntryImpl;
 import io.github.stuff_stuffs.aiex.common.impl.brain.resource.AbstractBrainResourcesImpl;
 import io.github.stuff_stuffs.aiex.common.impl.brain.resource.BrainResourcesImpl;
@@ -44,19 +45,25 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
     private final TaskConfig<T> taskConfig;
     private final AbstractBrainResourcesImpl resources;
     private long seed;
+    private final SpannedLogger logger;
     private AiFakePlayer fakePlayer;
     private long age;
     private boolean init = false;
 
-    public AiBrainImpl(final T entity, final BrainNode<T, Unit, Unit> node, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig, final long seed) {
+    public AiBrainImpl(final T entity, final BrainNode<T, Unit, Unit> node, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig, final long seed, final SpannedLogger logger) {
         this.entity = entity;
         rootNode = node;
         this.config = config;
         this.seed = seed;
+        this.logger = logger;
         handler = new EventHandler();
         memories = new MemoriesImpl(memoryConfig, this);
         this.taskConfig = taskConfig;
         resources = new BrainResourcesImpl();
+    }
+
+    public SpannedLogger logger() {
+        return logger;
     }
 
     @Override
@@ -151,15 +158,18 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
                 entry.set(entry.get() - 1);
             }
         }
-        final BrainContext<T> context = createContext();
-        if (!init) {
-            if (entity instanceof AbstractNpcEntity e) {
-                fakePlayer = AiFakePlayer.create(e, (ServerWorld) e.getEntityWorld());
+        try (final SpannedLogger child = logger.open("root")) {
+            final BrainContext<T> context = createContext();
+            if (!init) {
+                if (entity instanceof AbstractNpcEntity e) {
+                    fakePlayer = AiFakePlayer.create(e, (ServerWorld) e.getEntityWorld());
+                }
+
+                rootNode.init(context, child);
+                init = true;
             }
-            rootNode.init(context);
-            init = true;
+            rootNode.tick(context, Unit.INSTANCE, child);
         }
-        rootNode.tick(context, Unit.INSTANCE);
     }
 
     @Override
@@ -190,7 +200,10 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
     @Override
     public void readNbt(final NbtCompound nbt) {
         if (init) {
-            rootNode.deinit(createContext());
+            try (final SpannedLogger child = logger.open("root")) {
+                rootNode.deinit(createContext(), child);
+            }
+            logger.debug("Reloading brain!");
             init = false;
         }
         age = nbt.getLong("age");

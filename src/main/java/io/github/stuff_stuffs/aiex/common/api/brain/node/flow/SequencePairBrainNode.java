@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
@@ -23,29 +24,38 @@ public class SequencePairBrainNode<C, R0, R1, R2, FC> implements BrainNode<C, R0
     }
 
     @Override
-    public void init(final BrainContext<C> context) {
-        first.init(context);
-        second.init(context);
+    public void init(final BrainContext<C> context, final SpannedLogger logger) {
+        try (final var child = logger.open("SequencedPair")) {
+            first.init(context, child);
+            second.init(context, child);
+        }
         state = false;
     }
 
     @Override
-    public R0 tick(final BrainContext<C> context, final FC arg) {
-        if (!state) {
-            final R1 res = first.tick(context, arg);
-            if (transitionPredicate.test(res)) {
-                state = true;
+    public R0 tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
+        try (final var child = logger.open("SequencedPair")) {
+            if (!state) {
+                child.debug("Entering First!");
+                final R1 res = first.tick(context, arg, child);
+                if (transitionPredicate.test(res)) {
+                    child.debug("Transitioning!");
+                    state = true;
+                }
+                return firstAdaptor.apply(context, res);
+            } else {
+                child.debug("Entering Second!");
+                return secondAdaptor.apply(context, second.tick(context, arg, child));
             }
-            return firstAdaptor.apply(context, res);
-        } else {
-            return secondAdaptor.apply(context, second.tick(context, arg));
         }
     }
 
     @Override
-    public void deinit(BrainContext<C> context) {
-        first.deinit(context);
-        second.deinit(context);
+    public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
+        try (final var child = logger.open("SequencedPair")) {
+            first.deinit(context, child);
+            second.deinit(context, child);
+        }
         state = false;
     }
 }

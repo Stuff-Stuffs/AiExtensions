@@ -5,7 +5,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfigurator;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
-import io.github.stuff_stuffs.aiex.common.api.entity.EntityNavigator;
+import io.github.stuff_stuffs.aiex.common.api.entity.EntityPather;
 import io.github.stuff_stuffs.aiex.common.api.entity.inventory.NpcInventory;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls.*;
@@ -13,36 +13,18 @@ import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.ai.pathing.EntityNavigation;
-import net.minecraft.entity.ai.pathing.Path;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.ItemCooldownManager;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.TagKey;
 
 public final class AiExApi {
-    public static final EntityApiLookup<EntityNavigator, Void> ENTITY_NAVIGATOR = EntityApiLookup.get(AiExCommon.id("basic_navigator"), EntityNavigator.class, Void.class);
+    public static final EntityApiLookup<EntityPather, Void> ENTITY_NAVIGATOR = EntityApiLookup.get(AiExCommon.id("basic_navigator"), EntityPather.class, Void.class);
     public static final EntityApiLookup<ItemCooldownManager, Void> COOLDOWN_MANAGER = EntityApiLookup.get(AiExCommon.id("basic_cooldown"), ItemCooldownManager.class, Void.class);
     public static final EntityApiLookup<NpcInventory, Void> NPC_INVENTORY = EntityApiLookup.get(AiExCommon.id("npc_inventory"), NpcInventory.class, Void.class);
 
     public static final TagKey<EntityType<?>> PROJECTILE_ENTITY_TAG = TagKey.of(RegistryKeys.ENTITY_TYPE, AiExCommon.id("projectile"));
 
     public static void init() {
-        ENTITY_NAVIGATOR.registerFallback((entity, context) -> {
-            if (entity instanceof MobEntity mob) {
-                return (pos, error) -> {
-                    final EntityNavigation navigation = mob.getNavigation();
-                    final Path path = navigation.findPathTo(pos.x, pos.y, pos.z, (int) Math.floor(error));
-                    if (path == null) {
-                        return true;
-                    }
-                    navigation.startMovingAlong(path, 0.5);
-                    return navigation.isIdle();
-                };
-            } else {
-                return null;
-            }
-        });
         COOLDOWN_MANAGER.registerFallback((entity, context) -> {
             if (entity instanceof AbstractNpcEntity npc) {
                 return npc.getCooldownManager();
@@ -56,9 +38,9 @@ public final class AiExApi {
             return null;
         });
         new TaskConfigurator().add(Entity.class, (entity, builder, accessor) -> {
-            final EntityNavigator navigator = AiExApi.ENTITY_NAVIGATOR.find(entity, null);
+            final EntityPather navigator = AiExApi.ENTITY_NAVIGATOR.find(entity, null);
             if (navigator != null) {
-                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> basic = parameters -> new DefaultWalkTask<>(parameters.target(), parameters.maxError());
+                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> basic = parameters -> new DefaultWalkTask<>(parameters.target(), parameters.maxError(), parameters.urgency());
                 if (accessor.has(BasicTasks.Walk.KEY)) {
                     final TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.Walk.KEY);
                     basic = current.fallbackTo(basic);

@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,33 +34,44 @@ public class UtilityBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
     }
 
     @Override
-    public void init(final BrainContext<C> context) {
+    public void init(final BrainContext<C> context, final SpannedLogger logger) {
         selected = -1;
         if (dynamic) {
             return;
         }
         selected = select(context);
-    }
-
-    @Override
-    public R tick(final BrainContext<C> context, final FC arg) {
-        if (dynamic) {
-            final int selected = select(context);
-            if (selected != this.selected) {
-                if (this.selected != -1) {
-                    entries.get(this.selected).node.deinit(context);
-                }
-                entries.get(selected).node.init(context);
-            }
-            this.selected = selected;
+        try (final var child = logger.open("Utility")) {
+            entries.get(selected).node.init(context, child);
         }
-        return entries.get(selected).node.tick(context, arg);
     }
 
     @Override
-    public void deinit(BrainContext<C> context) {
+    public R tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
+        try (final var child = logger.open("Utility")) {
+            if (dynamic) {
+                final int selected = select(context);
+                if (selected != this.selected) {
+                    child.debug("Changing selection from " + this.selected + " to " + selected);
+                    if (this.selected != -1) {
+                        entries.get(this.selected).node.deinit(context, child);
+                    }
+                    entries.get(selected).node.init(context, child);
+                } else {
+                    child.debug("Reselected same element!");
+                }
+                this.selected = selected;
+            }
+            logger.debug("Entering " + selected + " child");
+            return entries.get(selected).node.tick(context, arg, child);
+        }
+    }
+
+    @Override
+    public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
         if (selected != -1) {
-            entries.get(selected).node.deinit(context);
+            try (final var child = logger.open("Utility")) {
+                entries.get(selected).node.deinit(context, child);
+            }
             selected = -1;
         }
     }

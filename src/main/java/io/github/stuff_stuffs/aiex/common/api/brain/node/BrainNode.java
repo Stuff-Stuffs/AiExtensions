@@ -3,6 +3,7 @@ package io.github.stuff_stuffs.aiex.common.api.brain.node;
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.*;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -11,11 +12,11 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 public interface BrainNode<C, R, FC> {
-    void init(BrainContext<C> context);
+    void init(BrainContext<C> context, SpannedLogger logger);
 
-    R tick(BrainContext<C> context, FC arg);
+    R tick(BrainContext<C> context, FC arg, SpannedLogger logger);
 
-    void deinit(BrainContext<C> context);
+    void deinit(BrainContext<C> context, SpannedLogger logger);
 
     default BrainNode<C, Unit, FC> discardResult() {
         return adaptResult((context, r) -> Unit.INSTANCE);
@@ -28,18 +29,24 @@ public interface BrainNode<C, R, FC> {
     default <R0> BrainNode<C, R0, FC> adaptResult(final BiFunction<BrainContext<C>, R, R0> adaptor) {
         return new BrainNode<>() {
             @Override
-            public void init(final BrainContext<C> context) {
-                BrainNode.this.init(context);
+            public void init(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final SpannedLogger adapted = logger.open("adaptResult")) {
+                    BrainNode.this.init(context, adapted);
+                }
             }
 
             @Override
-            public R0 tick(final BrainContext<C> context, final FC arg) {
-                return adaptor.apply(context, BrainNode.this.tick(context, arg));
+            public R0 tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
+                try (final SpannedLogger adapted = logger.open("adaptResult")) {
+                    return adaptor.apply(context, BrainNode.this.tick(context, arg, adapted));
+                }
             }
 
             @Override
-            public void deinit(final BrainContext<C> context) {
-                BrainNode.this.deinit(context);
+            public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final SpannedLogger adapted = logger.open("adaptResult")) {
+                    BrainNode.this.deinit(context, adapted);
+                }
             }
         };
     }
@@ -55,18 +62,24 @@ public interface BrainNode<C, R, FC> {
     default <FC0> BrainNode<C, R, FC0> adaptArg(final BiFunction<BrainContext<C>, FC0, FC> adaptor) {
         return new BrainNode<>() {
             @Override
-            public void init(final BrainContext<C> context) {
-                BrainNode.this.init(context);
+            public void init(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final SpannedLogger adapted = logger.open("adaptArg")) {
+                    BrainNode.this.init(context, adapted);
+                }
             }
 
             @Override
-            public R tick(final BrainContext<C> context, final FC0 arg) {
-                return BrainNode.this.tick(context, adaptor.apply(context, arg));
+            public R tick(final BrainContext<C> context, final FC0 arg, final SpannedLogger logger) {
+                try (final SpannedLogger adapted = logger.open("adaptArg")) {
+                    return BrainNode.this.tick(context, adaptor.apply(context, arg), adapted);
+                }
             }
 
             @Override
-            public void deinit(final BrainContext<C> context) {
-                BrainNode.this.deinit(context);
+            public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final SpannedLogger adapted = logger.open("adaptArg")) {
+                    BrainNode.this.deinit(context, adapted);
+                }
             }
         };
     }

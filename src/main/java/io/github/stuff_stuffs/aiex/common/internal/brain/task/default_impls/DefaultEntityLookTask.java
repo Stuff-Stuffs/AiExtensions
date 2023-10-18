@@ -3,9 +3,10 @@ package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskTerminalBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.hit.BlockHitResult;
@@ -39,65 +40,73 @@ public class DefaultEntityLookTask<T extends Entity> implements BrainNode<T, Bas
     }
 
     @Override
-    public void init(final BrainContext<T> context) {
+    public void init(final BrainContext<T> context, final SpannedLogger logger) {
 
     }
 
     @Override
-    public BasicTasks.Look.Result tick(final BrainContext<T> context, final BrainResourceRepository arg) {
-        final T entity = context.entity();
-        final Vec3d eyePos = entity.getPos().add(0, entity.getEyeHeight(entity.getPose()), 0);
-        final Box box = target.getBoundingBox();
-        if (box.contains(eyePos)) {
-            return BasicTasks.Look.Result.ALIGNED;
-        }
-        final Vec3d otherEye;
-        if (target instanceof LivingEntity o) {
-            otherEye = o.getEyePos();
-        } else {
-            otherEye = box.getCenter();
-        }
-        if (lastEyePos == null || lastEyePos.squaredDistanceTo(eyePos) > 0.01) {
-            lastEyePos = eyePos;
-            if (delegate != null) {
-                delegate.deinit(context);
+    public BasicTasks.Look.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, final SpannedLogger logger) {
+        try (final var l = logger.open("DefaultEntityLookImpl")) {
+            final T entity = context.entity();
+            final Vec3d eyePos = entity.getPos().add(0, entity.getEyeHeight(entity.getPose()), 0);
+            final Box box = target.getBoundingBox();
+            if (box.contains(eyePos)) {
+                return BasicTasks.Look.Result.ALIGNED;
             }
-            delegate = null;
-        }
-        if (lastTargetPos == null || lastTargetPos.squaredDistanceTo(otherEye) > 0.01) {
-            lastTargetPos = otherEye;
-            if (delegate != null) {
-                delegate.deinit(context);
-            }
-            delegate = null;
-        }
-        if (delegate == null) {
-            final Vec3d target = computeTarget(eyePos, box, otherEye, context.world(), shapeType, context.entity(), context.randomSeed());
-            if (target == null) {
-                delegate = BrainNodes.constant(BasicTasks.Look.Result.FAILED);
+            final Vec3d otherEye;
+            if (target instanceof LivingEntity o) {
+                otherEye = o.getEyePos();
             } else {
-                final Vec3d delta = target.subtract(eyePos);
-                final Optional<BrainNode<T, BasicTasks.Look.Result, BrainResourceRepository>> task = context.createTask(BasicTasks.Look.KEY, new BasicTasks.Look.Parameters() {
-                    @Override
-                    public Vec3d lookDir() {
-                        return delta;
-                    }
-
-                    @Override
-                    public double lookSpeed() {
-                        return lookSpeed;
-                    }
-                });
-                delegate = task.orElseGet(() -> BrainNodes.constant(BasicTasks.Look.Result.FAILED));
+                otherEye = box.getCenter();
             }
+            if (lastEyePos == null || lastEyePos.squaredDistanceTo(eyePos) > 0.01) {
+                lastEyePos = eyePos;
+                if (delegate != null) {
+                    l.debug("Opening delegate");
+                    delegate.deinit(context, l);
+                }
+                delegate = null;
+            }
+            if (lastTargetPos == null || lastTargetPos.squaredDistanceTo(otherEye) > 0.01) {
+                lastTargetPos = otherEye;
+                if (delegate != null) {
+                    l.debug("Opening delegate");
+                    delegate.deinit(context, l);
+                }
+                delegate = null;
+            }
+            if (delegate == null) {
+                final Vec3d target = computeTarget(eyePos, box, otherEye, context.world(), shapeType, context.entity(), context.randomSeed());
+                if (target == null) {
+                    delegate = BrainNodes.constant(BasicTasks.Look.Result.FAILED);
+                } else {
+                    final Vec3d delta = target.subtract(eyePos);
+                    final Optional<BrainNode<T, BasicTasks.Look.Result, BrainResourceRepository>> task = context.createTask(BasicTasks.Look.KEY, new BasicTasks.Look.Parameters() {
+                        @Override
+                        public Vec3d lookDir() {
+                            return delta;
+                        }
+
+                        @Override
+                        public double lookSpeed() {
+                            return lookSpeed;
+                        }
+                    });
+                    delegate = task.orElseGet(() -> BrainNodes.constant(BasicTasks.Look.Result.FAILED));
+                }
+            }
+            l.debug("Opening delegate");
+            return delegate.tick(context, arg, l);
         }
-        return delegate.tick(context, arg);
     }
 
     @Override
-    public void deinit(final BrainContext<T> context) {
+    public void deinit(final BrainContext<T> context, final SpannedLogger logger) {
         if (delegate != null) {
-            delegate.deinit(context);
+            try (final var l = logger.open("DefaultEntityLookImpl")) {
+                l.debug("Opening delegate");
+                delegate.deinit(context, l);
+            }
         }
     }
 
@@ -143,7 +152,7 @@ public class DefaultEntityLookTask<T extends Entity> implements BrainNode<T, Bas
         final MutableObject<Entity> lastTarget = new MutableObject<>(parameters.entity());
         final MutableObject<RaycastContext.ShapeType> lastShapeType = new MutableObject<>(parameters.type());
         final MutableDouble lastLookSpeed = new MutableDouble(parameters.lookSpeed());
-        return BrainNodes.expectResult(new TaskTerminalBrainNode<>(BasicTasks.Look.ENTITY_KEY, (BiFunction<BrainResourceRepository, BrainContext<T>, BasicTasks.Look.EntityParameters>) (repository, context) -> parameters).resetOnContext((context, repository) -> {
+        return BrainNodes.expectResult(new TaskBrainNode<>(BasicTasks.Look.ENTITY_KEY, (BiFunction<BrainResourceRepository, BrainContext<T>, BasicTasks.Look.EntityParameters>) (repository, context) -> parameters, (arg, context) -> arg).resetOnContext((context, repository) -> {
             boolean reset = false;
             if (lastTarget.getValue() != parameters.entity()) {
                 reset = true;

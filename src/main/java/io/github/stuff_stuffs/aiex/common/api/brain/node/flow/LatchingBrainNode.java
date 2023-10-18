@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.Optional;
 import java.util.function.BiPredicate;
@@ -17,28 +18,36 @@ public class LatchingBrainNode<C, R, FC> implements BrainNode<C, Optional<R>, FC
     }
 
     @Override
-    public void init(final BrainContext<C> context) {
-        latched = false;
-    }
-
-    @Override
-    public Optional<R> tick(final BrainContext<C> context, final FC arg) {
-        if (!latched && hook.test(context, arg)) {
-            latched = true;
-            delegate.init(context);
-        }
-        if (latched) {
-            final R res = delegate.tick(context, arg);
-            return Optional.of(res);
-        } else {
-            return Optional.empty();
+    public void init(final BrainContext<C> context, SpannedLogger logger) {
+        try (final var child = logger.open("latch")) {
+            latched = false;
         }
     }
 
     @Override
-    public void deinit(final BrainContext<C> context) {
+    public Optional<R> tick(final BrainContext<C> context, final FC arg, SpannedLogger logger) {
+        try (final var child = logger.open("latch")) {
+            if (!latched && hook.test(context, arg)) {
+                latched = true;
+                child.debug("Latching!");
+                delegate.init(context, child);
+            }
+            if (latched) {
+                final R res = delegate.tick(context, arg, child);
+                return Optional.of(res);
+            } else {
+                return Optional.empty();
+            }
+        }
+    }
+
+    @Override
+    public void deinit(final BrainContext<C> context, SpannedLogger logger) {
         if (latched) {
-            delegate.deinit(context);
+            try (final var child = logger.open("latch")) {
+                delegate.deinit(context, child);
+            }
+            latched = false;
         }
     }
 }

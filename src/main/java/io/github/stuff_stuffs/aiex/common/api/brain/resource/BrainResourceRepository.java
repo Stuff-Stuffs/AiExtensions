@@ -11,6 +11,10 @@ public interface BrainResourceRepository {
         return new BrainResourceRepositoryImpl.BuilderImpl();
     }
 
+    static BrainResourceRepository buildEmpty(final BrainResources resources) {
+        return BrainResourceRepository.builder().build(resources);
+    }
+
     interface Builder {
         Builder add(BrainResources.Token token);
 

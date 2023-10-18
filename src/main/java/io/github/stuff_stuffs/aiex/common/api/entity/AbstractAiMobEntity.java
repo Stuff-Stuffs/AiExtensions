@@ -14,7 +14,6 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.brain.Brain;
 import net.minecraft.entity.ai.control.BodyControl;
-import net.minecraft.entity.ai.control.JumpControl;
 import net.minecraft.entity.ai.control.LookControl;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.MobEntity;
@@ -39,11 +38,6 @@ public abstract class AbstractAiMobEntity extends MobEntity implements AiEntity 
     protected AbstractAiMobEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
         lookControl = new LookControl(this) {
-            @Override
-            public void tick() {
-            }
-        };
-        jumpControl = new JumpControl(this) {
             @Override
             public void tick() {
             }
