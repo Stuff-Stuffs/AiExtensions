@@ -31,6 +31,8 @@ public class StringTemplateImpl implements StringTemplate {
         }
         if (lastOpen + 1 == len) {
             strings.add("");
+        } else {
+            strings.add(template.substring(lastOpen + 1, len));
         }
         sections = strings.toArray(new String[0]);
         int sum = 0;
@@ -48,7 +50,7 @@ public class StringTemplateImpl implements StringTemplate {
     @Override
     public String apply(final Object... args) {
         if (args.length != sections.length - 1) {
-            throw new IllegalArgumentException("Must supply " + (sections.length - 1) + "arguments, found " + args.length);
+            throw new IllegalArgumentException("Must supply " + (sections.length - 1) + " arguments, found " + args.length);
         }
         final String[] strings = new String[args.length];
         int i = 0;

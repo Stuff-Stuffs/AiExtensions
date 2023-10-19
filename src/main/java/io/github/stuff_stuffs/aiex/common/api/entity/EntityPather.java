@@ -13,18 +13,6 @@ public interface EntityPather {
 
     boolean idle();
 
-    interface EntityNode<N extends EntityNode<N>> {
-        int x();
-
-        int y();
-
-        int z();
-
-        double cost();
-
-        N previous();
-    }
-
     interface EntityContext {
         Entity entity();
 

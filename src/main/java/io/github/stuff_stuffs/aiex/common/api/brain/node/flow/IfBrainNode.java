@@ -28,13 +28,13 @@ public class IfBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
     @Override
     public void init(final BrainContext<C> context, final SpannedLogger logger) {
         prev = TriState.DEFAULT;
-        try (final var child = logger.open("If[dynamic=" + dynamic + "]")) {
+        try (final var child = dynamic ? logger.open("DynamicIf") : logger.open("If")) {
         }
     }
 
     @Override
     public R tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
-        try (final var child = logger.open("If[dynamic=" + dynamic + "]")) {
+        try (final var child = dynamic ? logger.open("DynamicIf") : logger.open("If")) {
             final boolean res;
             if (dynamic) {
                 res = predicate.test(context, arg);
@@ -67,7 +67,7 @@ public class IfBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
                 if (prev == TriState.DEFAULT) {
                     res = predicate.test(context, arg);
                     prev = TriState.of(res);
-                    child.debug("Setting value=" + res);
+                    child.debug("Setting value-" + res);
                     if (res) {
                         trueBranch.init(context, child);
                     } else {
@@ -89,7 +89,7 @@ public class IfBrainNode<C, R, FC> implements BrainNode<C, R, FC> {
 
     @Override
     public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
-        try (final var child = logger.open("If[dynamic=" + dynamic + "]")) {
+        try (final var child = dynamic ? logger.open("DynamicIf") : logger.open("If")) {
             if (prev == TriState.TRUE) {
                 try (final var tLogger = child.open("trueBranch")) {
                     trueBranch.deinit(context, tLogger);

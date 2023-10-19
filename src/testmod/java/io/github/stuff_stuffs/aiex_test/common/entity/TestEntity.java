@@ -32,11 +32,11 @@ import java.util.function.BiPredicate;
 public class TestEntity extends AbstractNpcEntity {
     private static final TrackedData<Boolean> SLIM_DATA = DataTracker.registerData(TestEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private final AiBrain brain;
-    private final BasicEntityNavigator navigator;
+    private final BasicEntityPather navigator;
 
     protected TestEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
-        navigator = new BasicEntityNavigator(this);
+        navigator = new BasicEntityPather(this);
         final BrainNode<TestEntity, BasicTasks.Walk.Result, Vec3d> walk = BrainNodes.expectResult(new TaskBrainNode<>(BasicTasks.Walk.KEY, (BiFunction<Vec3d, BrainContext<TestEntity>, BasicTasks.Walk.Parameters>) (vec3d, context) -> new BasicTasks.Walk.Parameters() {
             @Override
             public Vec3d target() {
@@ -64,7 +64,7 @@ public class TestEntity extends AbstractNpcEntity {
         updateSlim();
     }
 
-    public BasicEntityNavigator getNavigator() {
+    public BasicEntityPather getNavigator() {
         return navigator;
     }
 

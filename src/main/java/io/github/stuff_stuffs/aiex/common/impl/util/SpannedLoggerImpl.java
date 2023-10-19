@@ -15,6 +15,7 @@ public class SpannedLoggerImpl implements SpannedLogger {
     private final String prefix;
     private final ObjectArrayList<Span> path = new ObjectArrayList<>();
     private boolean closed = false;
+    private boolean writtenRootPrelude = false;
 
     public SpannedLoggerImpl(final Level level, final OutputStream stream, final String prefix) {
         this.level = level;
@@ -49,14 +50,16 @@ public class SpannedLoggerImpl implements SpannedLogger {
     }
 
     private void writePrelude() {
-        int i = path.size() - 1;
-        while (i >= 0) {
-            final Span span = path.get(i--);
+        for (final Span span : path) {
             if (span.opened) {
-                return;
+                continue;
             }
             try {
-                stream.write(("<" + span + ">").getBytes(StandardCharsets.UTF_8));
+                if (!writtenRootPrelude) {
+                    stream.write(("<" + prefix + ">").getBytes(StandardCharsets.UTF_8));
+                    writtenRootPrelude = true;
+                }
+                stream.write(("<" + span.getMessage() + ">").getBytes(StandardCharsets.UTF_8));
                 span.opened = true;
             } catch (final IOException e) {
                 throw new RuntimeException(e);
@@ -72,7 +75,7 @@ public class SpannedLoggerImpl implements SpannedLogger {
         if (this.level.compareTo(level) >= 0) {
             writePrelude();
             try {
-                stream.write(("<message " + " level=" + level.name() + " >\n").getBytes(StandardCharsets.UTF_8));
+                stream.write(("<message " + " level='" + level.name() + "' >\n").getBytes(StandardCharsets.UTF_8));
                 stream.write(message.getBytes(StandardCharsets.UTF_8));
                 stream.write('\n');
                 stream.write("</message>".getBytes(StandardCharsets.UTF_8));
@@ -116,7 +119,7 @@ public class SpannedLoggerImpl implements SpannedLogger {
         final Span p = path.pop();
         if (p.opened) {
             try {
-                stream.write(("</" + p.message + ">").getBytes(StandardCharsets.UTF_8));
+                stream.write(("</" + p.getMessage() + ">").getBytes(StandardCharsets.UTF_8));
             } catch (final IOException e) {
                 throw new RuntimeException(e);
             }

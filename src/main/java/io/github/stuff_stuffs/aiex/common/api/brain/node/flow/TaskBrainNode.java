@@ -11,7 +11,7 @@ import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 public class TaskBrainNode<C, R, P, FC, FC0> implements BrainNode<C, TaskBrainNode.Result<R>, FC> {
-    private static final StringTemplate NAME_TEMPLATE = StringTemplate.create("Task[{}]");
+    private static final StringTemplate NAME_TEMPLATE = StringTemplate.create("Task-{}");
     private final TaskKey<R, P, FC0> key;
     private final BiFunction<? super FC, BrainContext<C>, ? extends P> parameterFactory;
     private final BiFunction<? super FC, BrainContext<C>, ? extends FC0> argExtractor;
@@ -33,7 +33,7 @@ public class TaskBrainNode<C, R, P, FC, FC0> implements BrainNode<C, TaskBrainNo
 
     @Override
     public Result<R> tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
-        try (final var child = logger.open(NAME_TEMPLATE, key)) {
+        try (final var child = logger.open(NAME_TEMPLATE, TaskKey.REGISTRY.getId(key).toUnderscoreSeparatedString())) {
             if (error) {
                 child.debug("Returning error!");
                 return new Failure<>();

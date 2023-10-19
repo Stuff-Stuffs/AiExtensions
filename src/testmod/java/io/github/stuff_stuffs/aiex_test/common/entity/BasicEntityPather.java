@@ -1,15 +1,16 @@
 package io.github.stuff_stuffs.aiex_test.common.entity;
 
-import io.github.stuff_stuffs.advanced_ai.common.api.util.CollisionHelper;
+import io.github.stuff_stuffs.advanced_ai.common.api.util.AStar;
+import io.github.stuff_stuffs.advanced_ai.common.api.util.CostGetter;
 import io.github.stuff_stuffs.advanced_ai.common.api.util.ShapeCache;
-import io.github.stuff_stuffs.advanced_ai.common.internal.AdvancedAiPathing;
-import io.github.stuff_stuffs.advanced_ai.common.internal.pathing.AStar;
-import io.github.stuff_stuffs.advanced_ai.common.internal.pathing.CostGetter;
 import io.github.stuff_stuffs.aiex.common.api.entity.EntityPather;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicPathingUniverse;
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.pathing.LandPathNodeMaker;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -17,9 +18,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BasicEntityNavigator implements EntityPather {
+public class BasicEntityPather implements EntityPather {
     private final MobEntity entity;
-    private final AStar<AiExTestEntities.BasicEntityNode, EntityContext, Target> pathfinder;
+    private final AStar<BasicEntityNode, EntityContext, Target> pathfinder;
     private @Nullable EntityPather.Target target = null;
     private double lastMaxError = 0.0;
     private double lastMaxCost = 0.0;
@@ -28,20 +29,24 @@ public class BasicEntityNavigator implements EntityPather {
     private int currentIndex = 0;
     private double urgency = 0.0;
 
-    public BasicEntityNavigator(final MobEntity entity) {
+    public BasicEntityPather(final MobEntity entity) {
         this.entity = entity;
         pathfinder = createPathFinder();
     }
 
-    private AiExTestEntities.BasicEntityNode createCurrent() {
-        return new AiExTestEntities.BasicEntityNode(entity.getBlockX(), entity.getBlockY(), entity.getBlockZ(), null, 0, entity.isOnGround());
+    private BasicEntityNode createCurrent(final ShapeCache cache) {
+        final int x = entity.getBlockX();
+        final int y = entity.getBlockY();
+        final int z = entity.getBlockZ();
+        final BasicPathingUniverse type = BasicPathingUniverse.CLASSIFIER.get(x, y, z, cache);
+        return new BasicEntityNode(x, y, z, null, 0, 0, type, type.floor ? MovementType.WALK : MovementType.JUMP);
     }
 
     @Override
     public boolean startFollowingPath(final Target target, final double error, final double maxCost, final boolean partial, final double urgency) {
         final BlockPos pos = entity.getBlockPos();
         final ShapeCache cache = ShapeCache.create(entity.getEntityWorld(), pos.add(-64, -64, -64), pos.add(64, 64, 64), 4096);
-        final AStar.PathInfo<AiExTestEntities.BasicEntityNode> path = pathfinder.findPath(createCurrent(), new EntityContext() {
+        final AStar.PathInfo<BasicEntityNode> path = pathfinder.findPath(createCurrent(cache), new EntityContext() {
             @Override
             public Entity entity() {
                 return entity;
@@ -60,24 +65,27 @@ public class BasicEntityNavigator implements EntityPather {
         }
         this.target = target;
         currentPath = new ArrayList<>(path.path().size());
-        for (final AiExTestEntities.BasicEntityNode node : path.path()) {
+        for (final BasicEntityNode node : path.path()) {
             currentPath.add(new Wrapper(node));
         }
         currentIndex = 0;
         lastMaxCost = maxCost;
         lastMaxError = error;
         lastPartial = partial;
-        currentPath.get(0).timeoutTimer = 20;
+        currentPath.get(0).timeoutTimer = 40;
         this.urgency = urgency;
         return true;
     }
 
-    public AStar<AiExTestEntities.BasicEntityNode, EntityContext, Target> createPathFinder() {
-        return new AStar<>(AiExTestEntities.BasicEntityNode.class) {
+    public AStar<BasicEntityNode, EntityContext, Target> createPathFinder() {
+        return new AStar<>(BasicEntityNode.class) {
             @Override
-            protected double heuristic(final AiExTestEntities.BasicEntityNode node, final Target target, final EntityContext context) {
+            protected double heuristic(final BasicEntityNode node, final Target target, final EntityContext context) {
                 if (target instanceof SingleTarget single) {
-                    return Math.sqrt(single.target().squaredDistanceTo(node.x() + 0.5, node.y(), node.z() + 0.5));
+                    final double dx = Math.abs(node.x() - single.target().x);
+                    final double dy = Math.abs(node.y() - single.target().y);
+                    final double dz = Math.abs(node.z() - single.target().z);
+                    return dx + dy + dz;
                 } else if (target instanceof MetricTarget metric) {
                     return metric.score(node.x(), node.y(), node.z(), context);
                 }
@@ -85,53 +93,56 @@ public class BasicEntityNavigator implements EntityPather {
             }
 
             @Override
-            protected double nodeCost(final AiExTestEntities.BasicEntityNode node) {
+            protected double nodeCost(final BasicEntityNode node) {
                 return node.cost();
             }
 
             @Override
-            protected long key(final AiExTestEntities.BasicEntityNode node) {
+            protected long key(final BasicEntityNode node) {
                 return BlockPos.asLong(node.x(), node.y(), node.z());
             }
 
             @Override
-            protected @Nullable AiExTestEntities.BasicEntityNode previousNode(final AiExTestEntities.BasicEntityNode node) {
+            protected @Nullable BasicEntityNode previousNode(final BasicEntityNode node) {
                 return node.previous();
             }
 
-            private AiExTestEntities.BasicEntityNode createJump(final int x, final int y, final int z, final AiExTestEntities.BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
-                return costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost() + 1.0D && getLocationType(x, y, z, shapeCache) == CollisionHelper.FloorCollision.FLOOR ? new AiExTestEntities.BasicEntityNode(x, y, z, prev, prev.cost() + 1.0D, true) : null;
+            private BasicEntityNode createJump(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
+                final BasicPathingUniverse nodeType = getLocationType(x, y, z, shapeCache);
+                return nodeType.floor && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost() + nodeType.costMultiplier ? new BasicEntityNode(x, y, z, prev, prev.cost() + nodeType.costMultiplier, 0, nodeType, MovementType.WALK) : null;
             }
 
-            private AiExTestEntities.BasicEntityNode createAir(final int x, final int y, final int z, final AiExTestEntities.BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
-                return costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost() + 1.0D && getLocationType(x, y, z, shapeCache) == CollisionHelper.FloorCollision.OPEN ? new AiExTestEntities.BasicEntityNode(x, y, z, prev, prev.cost() + 1.0D, false) : null;
+            private BasicEntityNode createAir(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
+                final BasicPathingUniverse nodeType = getLocationType(x, y, z, shapeCache);
+                return nodeType.air && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost() + nodeType.costMultiplier * 1.3 ? new BasicEntityNode(x, y, z, prev, prev.cost() + nodeType.costMultiplier * 1.3, nodeType.floor ? 0 : prev.fallBlocks() + 1, nodeType, MovementType.JUMP) : null;
             }
 
-            private AiExTestEntities.BasicEntityNode createBasic(final int x, final int y, final int z, final AiExTestEntities.BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
-                final CollisionHelper.FloorCollision collision;
-                return costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost() + 1.0D && (collision = getLocationType(x, y, z, shapeCache)) != CollisionHelper.FloorCollision.CLOSED ? new AiExTestEntities.BasicEntityNode(x, y, z, prev, prev.cost() + 1.0D, collision == CollisionHelper.FloorCollision.FLOOR) : null;
+            private BasicEntityNode createBasic(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
+                final BasicPathingUniverse nodeType = getLocationType(x, y, z, shapeCache);
+                return nodeType != BasicPathingUniverse.BLOCKED && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost() + nodeType.costMultiplier ? new BasicEntityNode(x, y, z, prev, prev.cost() + nodeType.costMultiplier, nodeType.floor ? 0 : prev.fallBlocks() + 1, nodeType, MovementType.WALK) : null;
             }
 
-            private AiExTestEntities.BasicEntityNode createAuto(final int x, final int y, final int z, final AiExTestEntities.BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
-                final CollisionHelper.FloorCollision type;
-                if (costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost() + 1.0D && (type = getLocationType(x, y, z, shapeCache)) != CollisionHelper.FloorCollision.CLOSED) {
-                    final boolean ground = type == CollisionHelper.FloorCollision.FLOOR;
-                    return new AiExTestEntities.BasicEntityNode(x, y, z, prev, prev.cost() + (double) (ground ? 10 : 1), ground);
+            private BasicEntityNode createAuto(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
+                final BasicPathingUniverse nodeType = getLocationType(x, y, z, shapeCache);
+                if (nodeType != BasicPathingUniverse.BLOCKED && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost() + nodeType.costMultiplier) {
+                    final boolean wasInAir = !prev.type().floor;
+                    final boolean isInAir = !nodeType.floor;
+                    return new BasicEntityNode(x, y, z, prev, prev.cost() + (wasInAir & !isInAir && !nodeType.air ? prev.fallBlocks() * 0.25 + nodeType.costMultiplier : nodeType.costMultiplier), isInAir ? prev.fallBlocks() + 1 : 0, nodeType, isInAir ? MovementType.FALL : MovementType.WALK);
                 } else {
                     return null;
                 }
             }
 
-            private CollisionHelper.FloorCollision getLocationType(final int x, final int y, final int z, final ShapeCache shapeCache) {
-                return shapeCache.getLocationCache(x, y, z, CollisionHelper.FloorCollision.CLOSED, AdvancedAiPathing.BASIC);
+            private BasicPathingUniverse getLocationType(final int x, final int y, final int z, final ShapeCache shapeCache) {
+                return shapeCache.getLocationCache(x, y, z, BasicPathingUniverse.BLOCKED, BasicPathingUniverse.CLASSIFIER);
             }
 
             @Override
-            protected int neighbours(final AiExTestEntities.BasicEntityNode previous, final EntityContext context, final CostGetter costGetter, final AiExTestEntities.BasicEntityNode[] successors) {
+            protected int neighbours(final BasicEntityNode previous, final EntityContext context, final CostGetter costGetter, final BasicEntityNode[] successors) {
                 int i = 0;
                 final ShapeCache cache = context.cache();
-                AiExTestEntities.BasicEntityNode node;
-                if (previous.onGround()) {
+                BasicEntityNode node;
+                if (previous.type().floor) {
                     node = createBasic(previous.x() + 1, previous.y(), previous.z(), previous, cache, costGetter);
                     if (node != null) {
                         successors[i++] = node;
@@ -151,9 +162,7 @@ public class BasicEntityNavigator implements EntityPather {
                     if (node != null) {
                         successors[i++] = node;
                     }
-                }
-
-                if (!previous.onGround() && previous.previous()!=null && previous.previous().onGround()) {
+                } else if (previous.movementType == MovementType.JUMP) {
                     node = createJump(previous.x() + 1, previous.y(), previous.z(), previous, cache, costGetter);
                     if (node != null) {
                         successors[i++] = node;
@@ -175,14 +184,12 @@ public class BasicEntityNavigator implements EntityPather {
                     }
                 }
 
-                if (previous.onGround()) {
+                if (previous.type().floor) {
                     node = createAir(previous.x(), previous.y() + 1, previous.z(), previous, cache, costGetter);
                     if (node != null) {
                         successors[i++] = node;
                     }
-                }
-
-                if (!previous.onGround()) {
+                } else {
                     node = createAuto(previous.x(), previous.y() - 1, previous.z(), previous, cache, costGetter);
                     if (node != null) {
                         successors[i++] = node;
@@ -213,6 +220,7 @@ public class BasicEntityNavigator implements EntityPather {
         if (currentPath != null) {
             continueAlongPath();
             if (currentPath != null && (currentPath.get(currentIndex).timeoutTimer--) == 0) {
+                System.out.println("Retry");
                 currentPath = null;
                 currentIndex = 0;
                 startFollowingPath(target, lastMaxError, lastMaxCost, lastPartial, urgency);
@@ -223,7 +231,7 @@ public class BasicEntityNavigator implements EntityPather {
     private void continueAlongPath() {
         assert currentPath != null;
         final double nodeReachProximity = (entity.getWidth() > 0.75F ? entity.getWidth() / 2.0F : 0.75F - entity.getWidth() / 2.0F);
-        final AiExTestEntities.BasicEntityNode vec3i = currentPath.get(currentIndex).node;
+        final BasicEntityNode vec3i = currentPath.get(currentIndex).node;
         final double d = Math.abs(entity.getX() - (vec3i.x() + 0.5));
         final double e = Math.abs(entity.getY() - vec3i.y());
         final double f = Math.abs(entity.getZ() - (vec3i.z() + 0.5));
@@ -234,27 +242,46 @@ public class BasicEntityNavigator implements EntityPather {
                 currentPath = null;
                 return;
             }
-            currentPath.get(currentIndex).timeoutTimer = 20;
+            currentPath.get(currentIndex).timeoutTimer = 40;
         }
         final Wrapper wrapper = currentPath.get(currentIndex);
-        double offX = (entity.getWidth() + 1.0F) * 0.5;
-        double offZ = (entity.getWidth() + 1.0F) * 0.5;
-        final Vec3d vec = new Vec3d(wrapper.node.x() + offX, wrapper.node.y(), wrapper.node.z() + offZ);
-        entity.getMoveControl().moveTo(wrapper.node.x() + offX, adjustTargetY(vec), wrapper.node.z() + offZ, 0.6);
+        final double centerizer = (entity.getWidth() + 1 - MathHelper.fractionalPart(entity.getWidth())) * 0.5;
+        final double x = wrapper.node.x() + centerizer;
+        final double y = adjustTargetY(new BlockPos(wrapper.node.x, wrapper.node.y, wrapper.node.z));
+        final double z = wrapper.node.z() + centerizer;
+        entity.getMoveControl().moveTo(x, y, z, Math.min(entity.getPos().distanceTo(new Vec3d(x, y, z)) + 0.05, 0.4));
     }
 
-    private double adjustTargetY(final Vec3d pos) {
-        final BlockPos blockPos = BlockPos.ofFloored(pos);
+    private double adjustTargetY(final BlockPos pos) {
         final World world = entity.getEntityWorld();
-        return world.getBlockState(blockPos.down()).isAir() ? pos.y : LandPathNodeMaker.getFeetY(world, blockPos);
+        final BlockState state = world.getBlockState(pos);
+        return state.isAir() ? pos.getY() : pos.getY() + state.getCollisionShape(world, pos).getMax(Direction.Axis.Y);
     }
 
     private static final class Wrapper {
-        private final AiExTestEntities.BasicEntityNode node;
+        private final BasicEntityNode node;
         private int timeoutTimer = 0;
 
-        private Wrapper(final AiExTestEntities.BasicEntityNode node) {
+        private Wrapper(final BasicEntityNode node) {
             this.node = node;
         }
+    }
+
+    public record BasicEntityNode(
+            int x,
+            int y,
+            int z,
+            BasicEntityNode previous,
+            double cost,
+            int fallBlocks,
+            BasicPathingUniverse type,
+            MovementType movementType
+    ) {
+    }
+
+    public enum MovementType {
+        WALK,
+        JUMP,
+        FALL
     }
 }
