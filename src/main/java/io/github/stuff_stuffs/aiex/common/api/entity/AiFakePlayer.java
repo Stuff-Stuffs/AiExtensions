@@ -51,4 +51,9 @@ public class AiFakePlayer extends FakePlayer {
     @Target(ElementType.METHOD)
     public @interface NoGenerateDelegate {
     }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface EnsureDelegateGeneration {
+    }
 }

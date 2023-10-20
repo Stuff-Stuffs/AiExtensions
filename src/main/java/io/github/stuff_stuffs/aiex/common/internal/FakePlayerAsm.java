@@ -61,6 +61,7 @@ public final class FakePlayerAsm {
         final String clazzDescriptor = Type.getDescriptor(clazz);
         classVisitor.visitField(Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL, "delegate", clazzDescriptor, null, null);
         for (final Method method : clazz.getMethods()) {
+            boolean delegateGenerated = false;
             if ((method.getModifiers() & Modifier.FINAL) == 0 && !method.isAnnotationPresent(AiFakePlayer.NoGenerateDelegate.class)) {
                 final Method delegateMethod;
                 try {
@@ -100,6 +101,10 @@ public final class FakePlayerAsm {
                 methodVisitor.visitInsn(Type.getType(method.getReturnType()).getOpcode(Opcodes.IRETURN));
                 methodVisitor.visitMaxs(idx + 1, idx + 1);
                 methodVisitor.visitEnd();
+                delegateGenerated = true;
+            }
+            if (!delegateGenerated && method.isAnnotationPresent(AiFakePlayer.EnsureDelegateGeneration.class)) {
+                throw new RuntimeException("Did not generate required delegate!");
             }
         }
         final MethodVisitor methodVisitor = classVisitor.visitMethod(Opcodes.ACC_PUBLIC, "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(ServerWorld.class), Type.getType(clazz)), null, null);

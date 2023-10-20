@@ -39,11 +39,17 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
         hungerManager = createHungerManager(world);
     }
 
+    @Override
+    public boolean cannotDespawn() {
+        return true;
+    }
+
     public NpcHungerManager getHungerManager() {
         return hungerManager;
     }
 
-    public ItemCooldownManager getCooldownManager() {
+    @AiFakePlayer.EnsureDelegateGeneration
+    public ItemCooldownManager getItemCooldownManager() {
         return cooldownManager;
     }
 
@@ -93,7 +99,7 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
     public void tick() {
         super.tick();
         cooldownManager.update();
-        if (getEntityWorld() instanceof ServerWorld world && isAlive()) {
+        if (getEntityWorld() instanceof ServerWorld && isAlive()) {
             final AiBrain brain = aiex$getBrain();
             brain.tick();
             hungerManager.tick(this);

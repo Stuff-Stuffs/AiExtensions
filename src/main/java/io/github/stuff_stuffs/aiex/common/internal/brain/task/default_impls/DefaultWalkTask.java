@@ -9,7 +9,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
-import io.github.stuff_stuffs.aiex.common.api.entity.EntityPather;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
@@ -23,12 +23,16 @@ public class DefaultWalkTask<T extends Entity> implements BrainNode<T, BasicTask
     private final Vec3d target;
     private final double maxError;
     private final double urgency;
+    private final double maxPathLength;
+    private final boolean partial;
     private @Nullable BrainResources.Token token = null;
 
-    public DefaultWalkTask(final Vec3d target, final double maxError, final double urgency) {
+    public DefaultWalkTask(final Vec3d target, final double maxError, final double urgency, final double maxPathLength, final boolean partial) {
         this.target = target;
         this.maxError = maxError;
         this.urgency = urgency;
+        this.maxPathLength = maxPathLength;
+        this.partial = partial;
     }
 
     @Override
@@ -52,7 +56,7 @@ public class DefaultWalkTask<T extends Entity> implements BrainNode<T, BasicTask
                     l.error("Cannot find EntityNavigator!");
                     return BasicTasks.Walk.Result.RESOURCE_ACQUISITION_ERROR;
                 }
-                if (!findInitialPath(navigator)) {
+                if (!navigator.startFollowingPath(new EntityPather.SingleTarget(target), maxError, maxPathLength, partial, urgency)) {
                     return BasicTasks.Walk.Result.CANNOT_REACH;
                 }
             }
@@ -66,10 +70,6 @@ public class DefaultWalkTask<T extends Entity> implements BrainNode<T, BasicTask
             }
             return context.entity().getPos().squaredDistanceTo(target) <= maxError * maxError ? BasicTasks.Walk.Result.DONE : BasicTasks.Walk.Result.CANNOT_REACH;
         }
-    }
-
-    private <N extends EntityPather.EntityNode<N>> boolean findInitialPath(final EntityPather pather) {
-        return pather.startFollowingPath(new EntityPather.SingleTarget(target), 1.0, 16, true, urgency);
     }
 
     @Override

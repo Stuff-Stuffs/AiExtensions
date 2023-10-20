@@ -3,7 +3,8 @@ package io.github.stuff_stuffs.aiex.common.api.entity.pathing;
 import io.github.stuff_stuffs.advanced_ai.common.api.pathing.location_caching.LocationClassifier;
 import io.github.stuff_stuffs.advanced_ai.common.api.util.ShapeCache;
 import io.github.stuff_stuffs.advanced_ai.common.api.util.UniverseInfo;
-import io.github.stuff_stuffs.aiex.common.api.util.DenseBlockTagSet;
+import io.github.stuff_stuffs.aiex.common.api.util.tag.CombinedDenseBlockTagSet;
+import io.github.stuff_stuffs.aiex.common.api.util.tag.DenseBlockTagSet;
 import io.github.stuff_stuffs.aiex.common.api.util.FlaggedCollisionHelper;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.minecraft.block.Block;
@@ -12,19 +13,25 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.TagKey;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Set;
+
 public enum BasicPathingUniverse {
     BLOCKED(false, false, 1.0),
     OPEN(false, true, 1.0),
-    FLOOR(true, true, 1.0),
+    FLOOR(true, false, 1.0),
     WATER(true, true, 1.5),
-    LAVA(true, true, 24),
+    LAVA(true, true, 128),
     DANGER(false, true, 24),
     DANGER_FLOOR(true, false, 24),
-    PATH(true, false, 0.1);
+    PATH(true, false, 0.2),
+    OPENABLE_DOOR(true, false, 2.0);
     public static final DenseBlockTagSet DANGER_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_danger")));
     public static final DenseBlockTagSet WATER_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_water")));
     public static final DenseBlockTagSet LAVA_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_lava")));
     public static final DenseBlockTagSet PATH_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_path")));
+    public static final DenseBlockTagSet OPENABLE_DOOR_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_door")));
+    public static final CombinedDenseBlockTagSet FLOOR_TAGS = CombinedDenseBlockTagSet.get(Set.of(DANGER_DENSE_SET.key(), PATH_DENSE_SET.key()));
+    public static final CombinedDenseBlockTagSet BOX_TAGS = CombinedDenseBlockTagSet.get(Set.of(LAVA_DENSE_SET.key(), DANGER_DENSE_SET.key(), OPENABLE_DOOR_DENSE_SET.key(), WATER_DENSE_SET.key()));
     public static final UniverseInfo<BasicPathingUniverse> UNIVERSE_INFO = UniverseInfo.fromEnum(BasicPathingUniverse.class);
     public static final LocationClassifier<BasicPathingUniverse> CLASSIFIER = new LocationClassifier<>() {
         private final FlaggedCollisionHelper<Flag, BasicPathingUniverse> helper = new FlaggedCollisionHelper<>(0.6, 1.8, OPEN, BLOCKED, FLOOR) {
@@ -34,7 +41,8 @@ public enum BasicPathingUniverse {
                     case WATER -> WATER;
                     case LAVA -> LAVA;
                     case DANGER -> DANGER;
-                    case PATH -> BLOCKED;
+                    case PATH -> OPEN;
+                    case DOOR -> OPENABLE_DOOR;
                 };
             }
 
@@ -50,17 +58,20 @@ public enum BasicPathingUniverse {
                     case LAVA -> LAVA;
                     case DANGER -> DANGER_FLOOR;
                     case PATH -> PATH;
+                    case DOOR -> OPENABLE_DOOR;
                 };
             }
 
             @Override
             protected @Nullable Flag testFloorState(final BlockState state, final int x, final int y, final int z, final ShapeCache world) {
                 final Block block = state.getBlock();
-                if (DANGER_DENSE_SET.isIn(block)) {
-                    return Flag.DANGER;
-                }
-                if (PATH_DENSE_SET.isIn(block)) {
-                    return Flag.PATH;
+                if (FLOOR_TAGS.isInAny(block)) {
+                    if (DANGER_DENSE_SET.isIn(block)) {
+                        return Flag.DANGER;
+                    }
+                    if (PATH_DENSE_SET.isIn(block)) {
+                        return Flag.PATH;
+                    }
                 }
                 return null;
             }
@@ -68,14 +79,19 @@ public enum BasicPathingUniverse {
             @Override
             protected @Nullable Flag testBoxState(final BlockState state, final int x, final int y, final int z, final ShapeCache world) {
                 final Block block = state.getBlock();
-                if (LAVA_DENSE_SET.isIn(block)) {
-                    return Flag.LAVA;
-                }
-                if (DANGER_DENSE_SET.isIn(block)) {
-                    return Flag.DANGER;
-                }
-                if (WATER_DENSE_SET.isIn(block)) {
-                    return Flag.WATER;
+                if (BOX_TAGS.isInAny(block)) {
+                    if (LAVA_DENSE_SET.isIn(block)) {
+                        return Flag.LAVA;
+                    }
+                    if (DANGER_DENSE_SET.isIn(block)) {
+                        return Flag.DANGER;
+                    }
+                    if (OPENABLE_DOOR_DENSE_SET.isIn(block)) {
+                        return Flag.DOOR;
+                    }
+                    if (WATER_DENSE_SET.isIn(block)) {
+                        return Flag.WATER;
+                    }
                 }
                 return null;
             }
@@ -84,6 +100,11 @@ public enum BasicPathingUniverse {
             protected Flag combineFlag(final Flag oldFlag, final Flag newFlag) {
                 return switch (oldFlag) {
                     case PATH, WATER -> newFlag;
+                    case DOOR -> switch (newFlag) {
+                        case PATH, DOOR, WATER -> Flag.DOOR;
+                        case DANGER -> Flag.DANGER;
+                        case LAVA -> Flag.LAVA;
+                    };
                     case LAVA -> Flag.LAVA;
                     case DANGER -> Flag.DANGER;
                 };
@@ -118,16 +139,17 @@ public enum BasicPathingUniverse {
     public final boolean air;
     public final double costMultiplier;
 
-    BasicPathingUniverse(final boolean floor, final boolean air, final double multiplier) {
+    BasicPathingUniverse(final boolean floor, final boolean air, final double costMultiplier) {
         this.floor = floor;
         this.air = air;
-        costMultiplier = multiplier;
+        this.costMultiplier = costMultiplier;
     }
 
     private enum Flag {
         WATER,
         LAVA,
         DANGER,
-        PATH
+        PATH,
+        DOOR
     }
 }

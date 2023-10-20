@@ -1,7 +1,6 @@
 package io.github.stuff_stuffs.aiex_test.common.entity;
 
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
-import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicPathingUniverse;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
 import net.minecraft.entity.EntityDimensions;

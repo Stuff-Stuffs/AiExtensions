@@ -11,7 +11,8 @@ import io.github.stuff_stuffs.aiex.common.api.entity.AiEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicPathingUniverse;
 import io.github.stuff_stuffs.aiex.common.api.entity_reference.EntityReferenceDataType;
 import io.github.stuff_stuffs.aiex.common.api.util.AfterRegistryFreezeEvent;
-import io.github.stuff_stuffs.aiex.common.api.util.DenseBlockTagSet;
+import io.github.stuff_stuffs.aiex.common.api.util.tag.CombinedDenseBlockTagSet;
+import io.github.stuff_stuffs.aiex.common.api.util.tag.DenseBlockTagSet;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import io.github.stuff_stuffs.aiex.common.impl.brain.AiBrainImpl;
 import io.github.stuff_stuffs.aiex.common.impl.util.NoopSpannedLoggerImpl;
@@ -47,8 +48,14 @@ public class AiExCommon implements ModInitializer {
                 ((AiBrainImpl<?>) ai.aiex$getBrain()).logger().close();
             }
         });
-        ServerLifecycleEvents.SERVER_STARTED.register(server -> DenseBlockTagSet.resetAll());
-        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> DenseBlockTagSet.resetAll());
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            DenseBlockTagSet.resetAll();
+            CombinedDenseBlockTagSet.resetAll();
+        });
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
+            DenseBlockTagSet.resetAll();
+            CombinedDenseBlockTagSet.resetAll();
+        });
         Registry.register(LocationClassifier.REGISTRY, AiExCommon.id("npc_basic"), BasicPathingUniverse.CLASSIFIER);
         AiExApi.init();
         AiBrainEventTypes.init();

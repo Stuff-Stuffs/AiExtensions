@@ -37,6 +37,14 @@ public final class BasicTasks {
             default double urgency() {
                 return 0.0;
             }
+
+            default double maxPathLength() {
+                return 64.0;
+            }
+
+            default boolean partial() {
+                return true;
+            }
         }
 
         public interface DynamicParameters extends Parameters {

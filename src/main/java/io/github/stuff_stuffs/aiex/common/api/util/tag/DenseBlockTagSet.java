@@ -1,40 +1,31 @@
-package io.github.stuff_stuffs.aiex.common.api.util;
+package io.github.stuff_stuffs.aiex.common.api.util.tag;
 
 import io.github.stuff_stuffs.aiex.common.internal.InternalBlockExtensions;
 import net.minecraft.block.Block;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.registry.tag.TagKey;
 import org.apache.commons.lang3.mutable.MutableObject;
 
 import java.lang.ref.WeakReference;
-import java.util.BitSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class DenseBlockTagSet {
+public final class DenseBlockTagSet extends DenseTagSet<Block> {
     private static final Map<TagKey<Block>, WeakReference<DenseBlockTagSet>> CACHE = new ConcurrentHashMap<>();
-    private final BitSet set = new BitSet();
-    private final TagKey<Block> key;
 
     private DenseBlockTagSet(final TagKey<Block> key) {
-        this.key = key;
+        super(key);
     }
 
-    public boolean isIn(final Block block) {
-        return set.get(((InternalBlockExtensions) block).aiex$uniqueId());
+    @Override
+    protected Registry<Block> registry() {
+        return Registries.BLOCK;
     }
 
-    public TagKey<Block> key() {
-        return key;
-    }
-
-    private void reset() {
-        set.clear();
-        for (final Block block : Registries.BLOCK) {
-            if (Registries.BLOCK.getEntry(block).isIn(key)) {
-                set.set(((InternalBlockExtensions) block).aiex$uniqueId());
-            }
-        }
+    @Override
+    protected int idFast(final Block val) {
+        return ((InternalBlockExtensions) val).aiex$uniqueId();
     }
 
     public static DenseBlockTagSet get(final TagKey<Block> key) {

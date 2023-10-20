@@ -1,11 +1,11 @@
-package io.github.stuff_stuffs.aiex.common.api.entity;
+package io.github.stuff_stuffs.aiex.common.api.entity.pathing;
 
 import io.github.stuff_stuffs.advanced_ai.common.api.util.ShapeCache;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 
 public interface EntityPather {
-    boolean startFollowingPath(Target target, double error, double maxCost, boolean partial, double urgency);
+    boolean startFollowingPath(Target target, double error, double maxPathLength, boolean partial, double urgency);
 
     void setUrgency(double urgency);
 
@@ -15,6 +15,8 @@ public interface EntityPather {
 
     interface EntityContext {
         Entity entity();
+
+        double maxPathLength();
 
         ShapeCache cache();
     }

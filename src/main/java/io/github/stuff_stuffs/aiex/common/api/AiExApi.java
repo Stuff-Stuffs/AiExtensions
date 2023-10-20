@@ -5,7 +5,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfigurator;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
-import io.github.stuff_stuffs.aiex.common.api.entity.EntityPather;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
 import io.github.stuff_stuffs.aiex.common.api.entity.inventory.NpcInventory;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls.*;
@@ -27,7 +27,7 @@ public final class AiExApi {
     public static void init() {
         COOLDOWN_MANAGER.registerFallback((entity, context) -> {
             if (entity instanceof AbstractNpcEntity npc) {
-                return npc.getCooldownManager();
+                return npc.getItemCooldownManager();
             }
             return null;
         });
@@ -40,7 +40,7 @@ public final class AiExApi {
         new TaskConfigurator().add(Entity.class, (entity, builder, accessor) -> {
             final EntityPather navigator = AiExApi.ENTITY_NAVIGATOR.find(entity, null);
             if (navigator != null) {
-                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> basic = parameters -> new DefaultWalkTask<>(parameters.target(), parameters.maxError(), parameters.urgency());
+                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> basic = parameters -> new DefaultWalkTask<>(parameters.target(), parameters.maxError(), parameters.urgency(), parameters.maxPathLength(), parameters.partial());
                 if (accessor.has(BasicTasks.Walk.KEY)) {
                     final TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.Walk.KEY);
                     basic = current.fallbackTo(basic);
