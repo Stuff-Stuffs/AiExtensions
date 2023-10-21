@@ -1,7 +1,7 @@
 package io.github.stuff_stuffs.aiex.common.api.entity.pathing;
 
 import io.github.stuff_stuffs.advanced_ai.common.api.util.ShapeCache;
-import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.Vec3d;
 
 public interface EntityPather {
@@ -14,7 +14,7 @@ public interface EntityPather {
     boolean idle();
 
     interface EntityContext {
-        Entity entity();
+        LivingEntity entity();
 
         double maxPathLength();
 

@@ -3,14 +3,16 @@ package io.github.stuff_stuffs.aiex.common.api.entity.pathing;
 import io.github.stuff_stuffs.advanced_ai.common.api.pathing.location_caching.LocationClassifier;
 import io.github.stuff_stuffs.advanced_ai.common.api.util.ShapeCache;
 import io.github.stuff_stuffs.advanced_ai.common.api.util.UniverseInfo;
+import io.github.stuff_stuffs.aiex.common.api.util.CollisionHelper;
 import io.github.stuff_stuffs.aiex.common.api.util.tag.CombinedDenseBlockTagSet;
 import io.github.stuff_stuffs.aiex.common.api.util.tag.DenseBlockTagSet;
-import io.github.stuff_stuffs.aiex.common.api.util.FlaggedCollisionHelper;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.TagKey;
+import net.minecraft.util.shape.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
@@ -24,108 +26,135 @@ public enum BasicPathingUniverse {
     DANGER(false, true, 24),
     DANGER_FLOOR(true, false, 24),
     PATH(true, false, 0.2),
-    OPENABLE_DOOR(true, false, 2.0);
-    public static final DenseBlockTagSet DANGER_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_danger")));
-    public static final DenseBlockTagSet WATER_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_water")));
-    public static final DenseBlockTagSet LAVA_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_lava")));
-    public static final DenseBlockTagSet PATH_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_path")));
-    public static final DenseBlockTagSet OPENABLE_DOOR_DENSE_SET = DenseBlockTagSet.get(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_door")));
-    public static final CombinedDenseBlockTagSet FLOOR_TAGS = CombinedDenseBlockTagSet.get(Set.of(DANGER_DENSE_SET.key(), PATH_DENSE_SET.key()));
-    public static final CombinedDenseBlockTagSet BOX_TAGS = CombinedDenseBlockTagSet.get(Set.of(LAVA_DENSE_SET.key(), DANGER_DENSE_SET.key(), OPENABLE_DOOR_DENSE_SET.key(), WATER_DENSE_SET.key()));
-    public static final UniverseInfo<BasicPathingUniverse> UNIVERSE_INFO = UniverseInfo.fromEnum(BasicPathingUniverse.class);
-    public static final LocationClassifier<BasicPathingUniverse> CLASSIFIER = new LocationClassifier<>() {
-        private final FlaggedCollisionHelper<Flag, BasicPathingUniverse> helper = new FlaggedCollisionHelper<>(0.6, 1.8, OPEN, BLOCKED, FLOOR) {
-            @Override
-            protected BasicPathingUniverse combineWithOpen(final Flag flag) {
-                return switch (flag) {
-                    case WATER -> WATER;
-                    case LAVA -> LAVA;
-                    case DANGER -> DANGER;
-                    case PATH -> OPEN;
-                    case DOOR -> OPENABLE_DOOR;
-                };
-            }
+    OPENABLE_DOOR(true, false, 2.0),
+    LADDER(true, true, 3.0);
+    public static final CombinedDenseBlockTagSet FLOOR_TAGS;
+    public static final CombinedDenseBlockTagSet BOX_TAGS;
 
-            @Override
-            protected BasicPathingUniverse combineWithClose(final Flag flag) {
+    static {
+        final Set<TagKey<Block>> floorKeys = new ObjectOpenHashSet<>();
+        final Set<TagKey<Block>> boxKeys = new ObjectOpenHashSet<>();
+        for (final Flag flag : Flag.values()) {
+            if (flag.floor) {
+                floorKeys.add(flag.key);
+            }
+            if (flag.box) {
+                boxKeys.add(flag.key);
+            }
+        }
+        FLOOR_TAGS = CombinedDenseBlockTagSet.get(floorKeys);
+        BOX_TAGS = CombinedDenseBlockTagSet.get(boxKeys);
+    }
+
+    public static final UniverseInfo<BasicPathingUniverse> UNIVERSE_INFO = UniverseInfo.fromEnum(BasicPathingUniverse.class);
+    public static final CollisionHelper<Long, Long, BasicPathingUniverse> COLLISION_HELPER = new CollisionHelper<>(0.6, 1.8, 0L, 0L) {
+        @Override
+        protected @Nullable BasicPathingUniverse boxCollision(final Long box) {
+            if (box < 0) {
                 return BLOCKED;
             }
-
-            @Override
-            protected BasicPathingUniverse combineWithFloor(final Flag flag) {
-                return switch (flag) {
-                    case WATER -> WATER;
-                    case LAVA -> LAVA;
-                    case DANGER -> DANGER_FLOOR;
-                    case PATH -> PATH;
-                    case DOOR -> OPENABLE_DOOR;
-                };
+            if ((Flag.LAVA.mask & box) != 0) {
+                return LAVA;
             }
-
-            @Override
-            protected @Nullable Flag testFloorState(final BlockState state, final int x, final int y, final int z, final ShapeCache world) {
-                final Block block = state.getBlock();
-                if (FLOOR_TAGS.isInAny(block)) {
-                    if (DANGER_DENSE_SET.isIn(block)) {
-                        return Flag.DANGER;
-                    }
-                    if (PATH_DENSE_SET.isIn(block)) {
-                        return Flag.PATH;
-                    }
-                }
-                return null;
+            if ((Flag.WATER.mask & box) != 0) {
+                return WATER;
             }
-
-            @Override
-            protected @Nullable Flag testBoxState(final BlockState state, final int x, final int y, final int z, final ShapeCache world) {
-                final Block block = state.getBlock();
-                if (BOX_TAGS.isInAny(block)) {
-                    if (LAVA_DENSE_SET.isIn(block)) {
-                        return Flag.LAVA;
-                    }
-                    if (DANGER_DENSE_SET.isIn(block)) {
-                        return Flag.DANGER;
-                    }
-                    if (OPENABLE_DOOR_DENSE_SET.isIn(block)) {
-                        return Flag.DOOR;
-                    }
-                    if (WATER_DENSE_SET.isIn(block)) {
-                        return Flag.WATER;
-                    }
-                }
-                return null;
+            if ((Flag.LADDER.mask & box) != 0) {
+                return LADDER;
             }
-
-            @Override
-            protected Flag combineFlag(final Flag oldFlag, final Flag newFlag) {
-                return switch (oldFlag) {
-                    case PATH, WATER -> newFlag;
-                    case DOOR -> switch (newFlag) {
-                        case PATH, DOOR, WATER -> Flag.DOOR;
-                        case DANGER -> Flag.DANGER;
-                        case LAVA -> Flag.LAVA;
-                    };
-                    case LAVA -> Flag.LAVA;
-                    case DANGER -> Flag.DANGER;
-                };
-            }
-        };
+            return null;
+        }
 
         @Override
+        protected BasicPathingUniverse bothCollision(final Long box, final Long floor) {
+            if ((Flag.DANGER.mask & box) != 0 || (Flag.DANGER.mask & floor) != 0) {
+                return floor < 0 ? DANGER_FLOOR : DANGER;
+            }
+            if ((Flag.PATH.mask & floor) != 0) {
+                return PATH;
+            }
+            return floor < 0 ? FLOOR : OPEN;
+        }
+
+        @Override
+        protected boolean shouldFloorReturnEarly(final Long state) {
+            return state < 0;
+        }
+
+        @Override
+        protected Long updateFloorState(final Long old, final int bx, final int by, final int bz, final double x, final double y, final double z, final VoxelShape thisShape, final VoxelShape shape, final BlockState state, final ShapeCache world) {
+            long l = old;
+            final Block block = state.getBlock();
+            if (FLOOR_TAGS.isInAny(block)) {
+                if (Flag.DANGER.set.isIn(block)) {
+                    l |= Flag.DANGER.mask;
+                }
+                if (Flag.PATH.set.isIn(block)) {
+                    l |= Flag.PATH.mask;
+                }
+            }
+            if (checkFloorCollision(box, thisShape, shape, bx, by, bz, x, y, z)) {
+                return l | 0x8000000000000000L;
+            }
+            return l;
+        }
+
+        @Override
+        protected boolean shouldReturnEarly(final Long state) {
+            return state < 0 | (state & Flag.LADDER.mask) != 0;
+        }
+
+        @Override
+        protected Long updateState(final Long old, final int bx, final int by, final int bz, final double x, final double y, final double z, final VoxelShape thisShape, final VoxelShape shape, final BlockState state, final ShapeCache world) {
+            long l = old;
+            final Block block = state.getBlock();
+            if (BOX_TAGS.isInAny(block)) {
+                if (Flag.DOOR.set.isIn(block)) {
+                    l |= Flag.DOOR.mask;
+                    return l;
+                }
+                if (Flag.LADDER.set.isIn(block) && !shape.isEmpty()) {
+                    l |= Flag.LADDER.mask;
+                    return l;
+                }
+                if (Flag.WATER.set.isIn(block)) {
+                    l |= Flag.WATER.mask;
+                }
+                if (Flag.LAVA.set.isIn(block)) {
+                    l |= Flag.LAVA.mask;
+                }
+                if (Flag.DANGER.set.isIn(block)) {
+                    l |= Flag.DANGER.mask;
+                }
+            }
+            if (checkBoxCollision(box, thisShape, shape, bx, by, bz, x, y, z)) {
+                return l | 0x8000000000000000L;
+            }
+            return l;
+        }
+    };
+    public static final LocationClassifier<BasicPathingUniverse> CLASSIFIER = new LocationClassifier<>() {
+        @Override
         public BasicPathingUniverse get(final int x, final int y, final int z, final ShapeCache cache) {
-            return helper.test(x, y, z, cache);
+            return COLLISION_HELPER.test(x, y, z, cache);
         }
 
         @Override
         public boolean needsRebuild(final int chunkSectionX, final int chunkSectionY, final int chunkSectionZ, final int otherChunkSectionX, final int otherChunkSectionY, final int otherChunkSectionZ, final int x, final int y, final int z, final ShapeCache cache, final BlockState oldState, final BlockState newState) {
-            if (x > 16 | y < -1) {
+            final int relX = x - chunkSectionX * 16;
+            final int relY = y - chunkSectionY * 16;
+            final int relZ = z - chunkSectionZ * 16;
+            if (relY > 16 | relY < -1) {
                 return false;
             }
-            if (y == -1) {
+            if (relY == -1) {
                 return true;
             }
-            final boolean xAdj = (x == -1 | x == 16);
-            final boolean zAdj = (z == -1 | z == 16);
+            if (Flag.DOOR.set.isIn(oldState.getBlock()) && Flag.DOOR.set.isIn(newState.getBlock())) {
+                return false;
+            }
+            final boolean xAdj = (relX == -1 | relX == 16);
+            final boolean zAdj = (relZ == -1 | relZ == 16);
             return xAdj | zAdj;
         }
 
@@ -146,10 +175,24 @@ public enum BasicPathingUniverse {
     }
 
     private enum Flag {
-        WATER,
-        LAVA,
-        DANGER,
-        PATH,
-        DOOR
+        WATER(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_water")), false, true),
+        LAVA(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_lava")), false, true),
+        DANGER(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_danger")), true, true),
+        PATH(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_path")), true, false),
+        DOOR(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_door")), false, true),
+        LADDER(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_ladder")), false, true);
+        public final TagKey<Block> key;
+        public final DenseBlockTagSet set;
+        public final boolean floor;
+        public final boolean box;
+        public final long mask;
+
+        Flag(final TagKey<Block> key, final boolean floor, final boolean box) {
+            this.key = key;
+            set = DenseBlockTagSet.get(key);
+            this.floor = floor;
+            this.box = box;
+            mask = 1L << ordinal();
+        }
     }
 }

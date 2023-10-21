@@ -33,7 +33,7 @@ public abstract class AbstractEntityPather<C extends EntityPather.EntityContext,
 
     protected abstract AStar<N, C, Target> createPathfinder();
 
-    protected abstract N createCurrent(final ShapeCache cache);
+    protected abstract N createCurrent(final ShapeCache cache, C context);
 
     protected abstract C createContext(ShapeCache cache, final double error, final double maxPathLength, final boolean partial, final double urgency);
 
@@ -41,7 +41,8 @@ public abstract class AbstractEntityPather<C extends EntityPather.EntityContext,
     public boolean startFollowingPath(final Target target, final double error, final double maxPathLength, final boolean partial, final double urgency) {
         final BlockPos pos = entity.getBlockPos();
         final ShapeCache cache = ShapeCache.create(entity.getEntityWorld(), pos.add(-64, -64, -64), pos.add(64, 64, 64), 4096);
-        final AStar.PathInfo<N> path = pathfinder.findPath(createCurrent(cache), createContext(cache, error, maxPathLength, partial, urgency), target, error * INV_ERROR_SCALE, partial);
+        C context = createContext(cache, error, maxPathLength, partial, urgency);
+        final AStar.PathInfo<N> path = pathfinder.findPath(createCurrent(cache, context), context, target, error * INV_ERROR_SCALE, partial);
         if (path == null || path.path() == null) {
             currentPath = null;
             this.urgency = 0;
@@ -108,10 +109,9 @@ public abstract class AbstractEntityPather<C extends EntityPather.EntityContext,
             currentPath.get(currentIndex).timeoutTimer = 20;
         }
         final BlockPos wrapper = fromNode(currentPath.get(currentIndex).node);
-        final double centerizer = (entity.getWidth() + 1 - MathHelper.fractionalPart(entity.getWidth())) * 0.5;
-        final double x = wrapper.getX() + centerizer;
+        final double x = wrapper.getX() + 0.5;
         final double y = adjustTargetY(wrapper);
-        final double z = wrapper.getZ() + centerizer;
+        final double z = wrapper.getZ() + 0.5;
         entity.getMoveControl().moveTo(x, y, z, Math.min(entity.getPos().distanceTo(new Vec3d(x, y, z)) + 0.05, 0.4));
     }
 

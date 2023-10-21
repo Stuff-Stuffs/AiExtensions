@@ -5,8 +5,10 @@ import io.github.stuff_stuffs.advanced_ai.common.api.util.CostGetter;
 import io.github.stuff_stuffs.advanced_ai.common.api.util.ShapeCache;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.AbstractEntityPather;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicPathingUniverse;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityMovementType;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
-import net.minecraft.entity.Entity;
+import io.github.stuff_stuffs.aiex.common.api.util.AiExMathUtil;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -20,6 +22,11 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
     @Override
     protected AStar<BasicEntityNode, EntityContext, Target> createPathfinder() {
         return new AStar<>(BasicEntityNode.class) {
+            @Override
+            protected boolean validEnd(final BasicEntityNode node, final EntityContext context) {
+                return node.type.floor;
+            }
+
             @Override
             protected double heuristic(final BasicEntityNode node, final Target target, final EntityContext context) {
                 if (target instanceof SingleTarget single) {
@@ -56,32 +63,56 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
 
             private BasicEntityNode createJump(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
                 final BasicPathingUniverse nodeType = getLocationType(x, y, z, shapeCache);
-                return nodeType.floor && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost + nodeType.costMultiplier ? new BasicEntityNode(x, y, z, prev, prev.cost + nodeType.costMultiplier, prev.pathLength + 1.5, 0, nodeType, getFlags(x, y, z, shapeCache), MovementType.WALK) : null;
+                if (nodeType.floor && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost + nodeType.costMultiplier) {
+                    return new BasicEntityNode(x, y, z, prev, prev.cost + nodeType.costMultiplier, prev.pathLength + 1.5, 0, nodeType, getFlags(x, y, z, shapeCache), EntityMovementType.WALK, prev.state);
+                }
+                return null;
             }
 
             private BasicEntityNode createAir(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
                 final BasicPathingUniverse nodeType = getLocationType(x, y, z, shapeCache);
-                return nodeType.air && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost + nodeType.costMultiplier * 1.3 ? new BasicEntityNode(x, y, z, prev, prev.cost + nodeType.costMultiplier * 1.3, prev.pathLength + 1, nodeType.floor ? 0 : prev.fallBlocks + 1, nodeType, getFlags(x, y, z, shapeCache), MovementType.JUMP) : null;
+                final EntityMovementType movementType = nodeType == BasicPathingUniverse.LADDER ? EntityMovementType.LADDER_CLIMB : nodeType.floor ? EntityMovementType.WALK : EntityMovementType.JUMP;
+                if (nodeType.air && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost + nodeType.costMultiplier * 1.3) {
+                    return new BasicEntityNode(x, y, z, prev, prev.cost + nodeType.costMultiplier * 1.3, prev.pathLength + 1, nodeType.floor ? 0 : prev.fallBlocks + 1, nodeType, getFlags(x, y, z, shapeCache), movementType, prev.state);
+                }
+                return null;
             }
 
             private BasicEntityNode createBasic(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
                 final BasicPathingUniverse nodeType = getLocationType(x, y, z, shapeCache);
                 if (nodeType != BasicPathingUniverse.BLOCKED && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost + nodeType.costMultiplier) {
-                    return new BasicEntityNode(x, y, z, prev, prev.cost + nodeType.costMultiplier, prev.pathLength + 1, nodeType.floor ? 0 : prev.fallBlocks + 1, nodeType, getFlags(x, y, z, shapeCache), MovementType.WALK);
+                    return new BasicEntityNode(x, y, z, prev, prev.cost + nodeType.costMultiplier, prev.pathLength + 1, nodeType.floor ? 0 : prev.fallBlocks + 1, nodeType, getFlags(x, y, z, shapeCache), EntityMovementType.WALK, prev.state);
                 }
                 return null;
             }
 
             private BasicEntityNode createAuto(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
                 final BasicPathingUniverse nodeType = getLocationType(x, y, z, shapeCache);
-                if (nodeType != BasicPathingUniverse.BLOCKED && costGetter.cost(BlockPos.asLong(x, y, z)) > prev.cost + nodeType.costMultiplier) {
+                if (nodeType != BasicPathingUniverse.BLOCKED) {
                     final boolean wasInAir = !prev.type.floor;
                     final boolean isInAir = !nodeType.floor;
-                    return new BasicEntityNode(x, y, z, prev, prev.cost + (wasInAir & !isInAir && !nodeType.air ? prev.fallBlocks * 0.25 + nodeType.costMultiplier : nodeType.costMultiplier), prev.pathLength + 1, isInAir ? prev.fallBlocks + 1 : 0, nodeType, getFlags(x, y, z, shapeCache), isInAir ? MovementType.FALL : MovementType.WALK);
-                } else {
-                    return null;
+                    double cost = prev.cost + nodeType.costMultiplier;
+                    final double blockHeight = shapeCache.getCollisionShape(x, y, z).getMax(Direction.Axis.Y);
+                    EntityState state = prev.state;
+                    if (wasInAir & !isInAir & !nodeType.air) {
+                        final double fallDistance = prev.fallBlocks + (1 - blockHeight);
+                        if (fallDistance >= 4) {
+                            final double damage = fallDistance - 4.0;
+                            if (damage > state.health) {
+                                return null;
+                            }
+                            cost = cost + AiExMathUtil.adjustableAsymptote(damage, state.health, 16, 4);
+                            state = state.withHealth(state.health - damage);
+                        }
+                    }
+                    if (costGetter.cost(BlockPos.asLong(x, y, z)) > cost) {
+                        final EntityMovementType type = nodeType == BasicPathingUniverse.LADDER ? EntityMovementType.LADDER_CLIMB : isInAir ? EntityMovementType.FALL : EntityMovementType.WALK;
+                        return new BasicEntityNode(x, y, z, prev, prev.cost + (wasInAir & !isInAir && !nodeType.air ? prev.fallBlocks * 0.25 + nodeType.costMultiplier : nodeType.costMultiplier), prev.pathLength + 1, isInAir ? prev.fallBlocks + (1 - blockHeight) : 0, nodeType, getFlags(x, y, z, shapeCache), type, state);
+                    }
                 }
+                return null;
             }
+
 
             private BasicPathingUniverse getLocationType(final int x, final int y, final int z, final ShapeCache shapeCache) {
                 return shapeCache.getLocationCache(x, y, z, BasicPathingUniverse.BLOCKED, BasicPathingUniverse.CLASSIFIER);
@@ -120,7 +151,7 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
                     if ((previous.flags & BasicEntityNode.HALF_BLOCK_OR_MORE_FLAG) != 0 && getLocationType(previous.x, previous.y + 1, previous.z, cache) != BasicPathingUniverse.BLOCKED) {
                         i = floorNodes(previous, cache, costGetter, successors, i, 1);
                     }
-                } else if (previous.movementType == MovementType.JUMP) {
+                } else if (previous.movementType == EntityMovementType.JUMP) {
                     node = createJump(previous.x + 1, previous.y, previous.z, previous, cache, costGetter);
                     if (node != null) {
                         successors[i++] = node;
@@ -147,7 +178,8 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
                     if (node != null) {
                         successors[i++] = node;
                     }
-                } else {
+                }
+                if (previous.type.air) {
                     node = createAuto(previous.x, previous.y - 1, previous.z, previous, cache, costGetter);
                     if (node != null) {
                         successors[i++] = node;
@@ -159,19 +191,19 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
     }
 
     @Override
-    protected BasicEntityNode createCurrent(final ShapeCache cache) {
+    protected BasicEntityNode createCurrent(final ShapeCache cache, final EntityContext context) {
         final int x = entity.getBlockX();
         final int y = entity.getBlockY();
         final int z = entity.getBlockZ();
         final BasicPathingUniverse type = BasicPathingUniverse.CLASSIFIER.get(x, y, z, cache);
-        return new BasicEntityNode(x, y, z, null, 0, 0, 0, type, getFlags(x, y, z, cache), type.floor ? MovementType.WALK : MovementType.JUMP);
+        return new BasicEntityNode(x, y, z, null, 0, 0, 0, type, getFlags(x, y, z, cache), type.floor ? EntityMovementType.WALK : EntityMovementType.JUMP, new EntityState(context.entity().getHealth()));
     }
 
     @Override
     protected EntityContext createContext(final ShapeCache cache, final double error, final double maxPathLength, final boolean partial, final double urgency) {
         return new EntityContext() {
             @Override
-            public Entity entity() {
+            public LivingEntity entity() {
                 return entity;
             }
 
@@ -192,6 +224,21 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
         return new BlockPos(node.x, node.y, node.z);
     }
 
+    public static final class EntityState {
+        private final double health;
+
+        public EntityState(final double health) {
+            this.health = health;
+        }
+
+        public EntityState withHealth(final double h) {
+            if (h != health) {
+                return new EntityState(h);
+            }
+            return this;
+        }
+    }
+
     public static final class BasicEntityNode {
         public static final long LESS_THAN_HALF_BLOCK_FLAG = 0x1;
         public static final long HALF_BLOCK_OR_MORE_FLAG = 0x2;
@@ -201,10 +248,11 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
         private final BasicEntityNode previous;
         private final double cost;
         private final double pathLength;
-        private final int fallBlocks;
+        private final double fallBlocks;
         private final BasicPathingUniverse type;
         private final long flags;
-        private final MovementType movementType;
+        private final EntityMovementType movementType;
+        private final EntityState state;
 
         public BasicEntityNode(
                 final int x,
@@ -213,10 +261,11 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
                 final BasicEntityNode previous,
                 final double cost,
                 final double pathLength,
-                final int fallBlocks,
+                final double fallBlocks,
                 final BasicPathingUniverse type,
                 final long flags,
-                final MovementType movementType
+                final EntityMovementType movementType,
+                final EntityState state
         ) {
             this.x = x;
             this.y = y;
@@ -228,6 +277,7 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
             this.type = type;
             this.flags = flags;
             this.movementType = movementType;
+            this.state = state;
         }
 
         @Override
@@ -256,11 +306,5 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
             }
         }
         return flags;
-    }
-
-    public enum MovementType {
-        WALK,
-        JUMP,
-        FALL
     }
 }
