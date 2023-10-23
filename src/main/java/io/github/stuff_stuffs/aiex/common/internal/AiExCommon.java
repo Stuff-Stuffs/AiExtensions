@@ -1,6 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.internal;
 
-import io.github.stuff_stuffs.advanced_ai.common.api.pathing.location_caching.LocationClassifier;
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.pathing.location_caching.LocationClassifier;
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.AiExGameRules;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
@@ -8,16 +8,18 @@ import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiEntity;
+import io.github.stuff_stuffs.aiex.common.api.entity.mine.BasicMiningUniverse;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicPathingUniverse;
 import io.github.stuff_stuffs.aiex.common.api.entity_reference.EntityReferenceDataType;
 import io.github.stuff_stuffs.aiex.common.api.util.AfterRegistryFreezeEvent;
+import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import io.github.stuff_stuffs.aiex.common.api.util.tag.CombinedDenseBlockTagSet;
 import io.github.stuff_stuffs.aiex.common.api.util.tag.DenseBlockTagSet;
-import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import io.github.stuff_stuffs.aiex.common.impl.brain.AiBrainImpl;
 import io.github.stuff_stuffs.aiex.common.impl.util.NoopSpannedLoggerImpl;
 import io.github.stuff_stuffs.aiex.common.mixin.MixinWorldSavePath;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.CommonLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.entity.Entity;
@@ -48,15 +50,11 @@ public class AiExCommon implements ModInitializer {
                 ((AiBrainImpl<?>) ai.aiex$getBrain()).logger().close();
             }
         });
-        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-            DenseBlockTagSet.resetAll();
-            CombinedDenseBlockTagSet.resetAll();
-        });
-        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> {
-            DenseBlockTagSet.resetAll();
-            CombinedDenseBlockTagSet.resetAll();
-        });
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> resetDenseTags());
+        ServerLifecycleEvents.END_DATA_PACK_RELOAD.register((server, resourceManager, success) -> resetDenseTags());
+        CommonLifecycleEvents.TAGS_LOADED.register((registries, client) -> resetDenseTags());
         Registry.register(LocationClassifier.REGISTRY, AiExCommon.id("npc_basic"), BasicPathingUniverse.CLASSIFIER);
+        Registry.register(LocationClassifier.REGISTRY, AiExCommon.id("npc_basic_mining"), BasicMiningUniverse.CLASSIFIER);
         AiExApi.init();
         AiBrainEventTypes.init();
         AiExGameRules.init();
@@ -67,12 +65,17 @@ public class AiExCommon implements ModInitializer {
         AfterRegistryFreezeEvent.EVENT.register(EntityReferenceDataTypeCache::clear);
     }
 
+    private static void resetDenseTags() {
+        DenseBlockTagSet.resetAll();
+        CombinedDenseBlockTagSet.resetAll();
+    }
+
     public static SpannedLogger createForEntity(final Entity entity) {
         if (entity.getEntityWorld() instanceof ServerWorld serverWorld) {
             try {
                 final LevelStorage.Session session = ((InternalServerExtensions) serverWorld.getServer()).aiex$session();
                 final Path directory = Files.createDirectories(session.getDirectory(ENTITY_LOG_SAVE_PATH));
-                final Path path = directory.resolve(entity.getUuidAsString() + ".xml");
+                final Path path = directory.resolve(entity.getUuidAsString() + ".log.xml.gz");
                 return SpannedLogger.create(SpannedLogger.Level.DEBUG, "Entity", path);
             } catch (final IOException ignored) {
             }

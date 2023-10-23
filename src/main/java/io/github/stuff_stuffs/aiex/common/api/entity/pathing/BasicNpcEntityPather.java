@@ -1,21 +1,21 @@
-package io.github.stuff_stuffs.aiex_test.common.entity;
+package io.github.stuff_stuffs.aiex.common.api.entity.pathing;
 
-import io.github.stuff_stuffs.advanced_ai.common.api.util.AStar;
-import io.github.stuff_stuffs.advanced_ai.common.api.util.CostGetter;
-import io.github.stuff_stuffs.advanced_ai.common.api.util.ShapeCache;
-import io.github.stuff_stuffs.aiex.common.api.entity.pathing.AbstractEntityPather;
-import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicPathingUniverse;
-import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityMovementType;
-import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.AStar;
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.CostGetter;
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.ShapeCache;
+import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
+import io.github.stuff_stuffs.aiex.common.api.entity.movement.NpcMovementNode;
 import io.github.stuff_stuffs.aiex.common.api.util.AiExMathUtil;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import org.jetbrains.annotations.Nullable;
 
-public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityContext, BasicEntityPather.BasicEntityNode> {
-    public BasicEntityPather(final MobEntity entity) {
+import java.util.ArrayList;
+import java.util.List;
+
+public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.EntityContext, BasicNpcEntityPather.BasicEntityNode> {
+    public BasicNpcEntityPather(final AbstractNpcEntity entity) {
         super(entity);
     }
 
@@ -220,9 +220,59 @@ public class BasicEntityPather extends AbstractEntityPather<EntityPather.EntityC
     }
 
     @Override
-    protected BlockPos fromNode(final BasicEntityNode node) {
-        return new BlockPos(node.x, node.y, node.z);
+    protected List<NpcMovementNode> convert(final List<BasicEntityNode> nodes) {
+        final List<NpcMovementNode> movementNodes = new ArrayList<>(nodes.size());
+        final int size = nodes.size();
+        for (final int[] i = new int[]{0}; i[0] < size; i[0]++) {
+            final NodeInfo node = convert(nodes, i, size);
+            NpcMovementNode movementNode = node.node;
+            for (int j = node.startIndex; j < node.endIndex; j++) {
+                movementNode = wrap(nodes, movementNode, j);
+            }
+            movementNodes.add(movementNode);
+        }
+        return movementNodes;
     }
+
+    protected NodeInfo convert(final List<BasicEntityNode> nodes, final int[] index, final int size) {
+        int i = index[0];
+        final BasicEntityNode node = nodes.get(i);
+        final BasicEntityNode next = i + 1 == size ? null : nodes.get(i + 1);
+        if (node.type == BasicPathingUniverse.LADDER) {
+            return new NodeInfo(new NpcMovementNode.ClimbLadder(node.x + 0.5, node.y + 1, node.z + 0.5), i, i + 1);
+        } else if (next != null && next.movementType == EntityMovementType.JUMP) {
+            final int start = i;
+            while (i < size && !nodes.get(i).type.floor) {
+                i = ++index[0];
+            }
+            final BasicEntityNode endOfJump;
+            if (i == size) {
+                endOfJump = nodes.get(size - 1);
+            } else {
+                endOfJump = nodes.get(i);
+                index[0]++;
+            }
+            return new NodeInfo(new NpcMovementNode.Jump(endOfJump.x + 0.5, endOfJump.y, endOfJump.z + 0.5), start, index[0]);
+        } else if (node.movementType == EntityMovementType.FALL) {
+            return new NodeInfo(new NpcMovementNode.Fall(node.x + 0.5, node.y + 0.5, node.z + 0.5), i, i + 1);
+        } else {
+            return new NodeInfo(new NpcMovementNode.Walk(node.x + 0.5, node.y, node.z + 0.5), i, i + 1);
+        }
+    }
+
+    protected NpcMovementNode wrap(final List<BasicEntityNode> nodes, final NpcMovementNode cursor, final int index) {
+        final BasicEntityNode node = nodes.get(index);
+        if (node.type == BasicPathingUniverse.OPENABLE_DOOR && index + 1 < nodes.size()) {
+            final BasicEntityNode next = nodes.get(index + 1);
+            final Direction going = Direction.getFacing(next.x - node.x, next.y - node.y, next.z - node.z);
+            return new NpcMovementNode.OpenDoor(cursor, going, node.x, node.y, node.z);
+        }
+        return cursor;
+    }
+
+    protected record NodeInfo(NpcMovementNode node, int startIndex, int endIndex) {
+    }
+
 
     public static final class EntityState {
         private final double health;

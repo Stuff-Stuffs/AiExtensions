@@ -5,9 +5,10 @@ import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfigurator;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
-import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
 import io.github.stuff_stuffs.aiex.common.api.entity.inventory.NpcInventory;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
+import io.github.stuff_stuffs.aiex.common.internal.InternalServerExtensions;
 import io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls.*;
 import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
 import net.minecraft.entity.Entity;
@@ -16,6 +17,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.ItemCooldownManager;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.TagKey;
+import net.minecraft.server.world.ServerWorld;
 
 public final class AiExApi {
     public static final EntityApiLookup<EntityPather, Void> ENTITY_NAVIGATOR = EntityApiLookup.get(AiExCommon.id("basic_navigator"), EntityPather.class, Void.class);
@@ -23,6 +25,10 @@ public final class AiExApi {
     public static final EntityApiLookup<NpcInventory, Void> NPC_INVENTORY = EntityApiLookup.get(AiExCommon.id("npc_inventory"), NpcInventory.class, Void.class);
 
     public static final TagKey<EntityType<?>> PROJECTILE_ENTITY_TAG = TagKey.of(RegistryKeys.ENTITY_TYPE, AiExCommon.id("projectile"));
+
+    public static void submitTask(final Runnable runnable, final ServerWorld world) {
+        ((InternalServerExtensions) world.getServer()).aiex$submitTask(runnable);
+    }
 
     public static void init() {
         COOLDOWN_MANAGER.registerFallback((entity, context) -> {

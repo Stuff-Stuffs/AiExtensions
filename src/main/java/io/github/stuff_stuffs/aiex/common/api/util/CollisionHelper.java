@@ -1,6 +1,7 @@
 package io.github.stuff_stuffs.aiex.common.api.util;
 
-import io.github.stuff_stuffs.advanced_ai.common.api.util.ShapeCache;
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.ShapeCache;
+import it.unimi.dsi.fastutil.HashCommon;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.math.Box;
@@ -11,6 +12,9 @@ import net.minecraft.util.shape.VoxelShapes;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class CollisionHelper<B, F, R> {
+    private static final int CACHE_BITS = 4;
+    private static final int CACHE_SIZE = 1 << CACHE_BITS;
+    private static final int CACHE_MASK = CACHE_SIZE - 1;
     protected static final VoxelShape FULL_CUBE = VoxelShapes.fullCube();
     protected static final VoxelShape EMPTY = VoxelShapes.empty();
     protected final Box box;
@@ -19,15 +23,34 @@ public abstract class CollisionHelper<B, F, R> {
     protected final VoxelShape floorShape;
     protected final B emptyBoxState;
     protected final F emptyFloorState;
+    private final double[] cachedHeights;
+    private final VoxelShape[] cachedBoxShapes;
+    private final VoxelShape[] cachedFloorShapes;
 
     public R test(final int x, final int y, final int z, final ShapeCache world) {
         final double floorOffset = floorHeight(x, y, z, world);
-        final B box = testBox(x, y + floorOffset, z, world);
+        final VoxelShape shape;
+        final VoxelShape floorShape;
+        if (floorOffset == 0.0) {
+            shape = boxShape;
+            floorShape = this.floorShape;
+        } else {
+            final int index = (int) (HashCommon.mix(Double.doubleToRawLongBits(floorOffset)) >>> 16) & CACHE_MASK;
+            if (cachedHeights[index] == floorOffset) {
+                shape = cachedBoxShapes[index];
+                floorShape = cachedFloorShapes[index];
+            } else {
+                cachedHeights[index] = floorOffset;
+                shape = cachedBoxShapes[index] = boxShape.offset(0, floorOffset, 0);
+                floorShape = cachedFloorShapes[index] = this.floorShape.offset(0, floorOffset, 0);
+            }
+        }
+        final B box = testBox(x, y + floorOffset, z, world, shape);
         final R collision = boxCollision(box);
         if (collision != null) {
             return collision;
         } else {
-            final F floor = testFloor(x, y + floorOffset, z, world);
+            final F floor = testFloor(x, y + floorOffset, z, world, floorShape);
             return bothCollision(box, floor);
         }
     }
@@ -59,14 +82,13 @@ public abstract class CollisionHelper<B, F, R> {
 
     protected abstract F updateFloorState(F old, int bx, int by, int bz, double x, double y, double z, VoxelShape thisShape, VoxelShape shape, BlockState state, ShapeCache world);
 
-    private F testFloor(final double xOff, final double yOff, final double zOff, final ShapeCache world) {
+    private F testFloor(final double xOff, final double yOff, final double zOff, final ShapeCache world, final VoxelShape shape) {
         final int minX = MathHelper.floor(floorBox.minX + xOff);
         final int maxX = MathHelper.ceil(floorBox.maxX + xOff + 0.0000001) - 1;
         final int minY = MathHelper.floor(floorBox.minY + yOff) - 1;
         final int maxY = MathHelper.ceil(floorBox.maxY + yOff + 0.0000001) - 1;
         final int minZ = MathHelper.floor(floorBox.minZ + zOff);
         final int maxZ = MathHelper.ceil(floorBox.maxZ + zOff + 0.0000001) - 1;
-        final VoxelShape shape = floorShape.offset(0, -(1 - MathHelper.fractionalPart(yOff)), 0);
         F collisionState = emptyFloorState;
         for (int y = minY; y <= maxY; ++y) {
             for (int x = minX; x <= maxX; ++x) {
@@ -115,9 +137,8 @@ public abstract class CollisionHelper<B, F, R> {
         return false;
     }
 
-    private B testBox(final double xOff, final double yOff, final double zOff, final ShapeCache world) {
+    private B testBox(final double xOff, final double yOff, final double zOff, final ShapeCache world, final VoxelShape shape) {
         final Box box = this.box;
-        final VoxelShape shape = boxShape.offset(0, MathHelper.fractionalPart(yOff), zOff);
         final int minX = MathHelper.floor(box.minX + xOff);
         final int maxX = MathHelper.ceil(box.maxX + xOff + 0.0000001) - 1;
         final int minY = MathHelper.floor(box.minY + yOff);
@@ -146,8 +167,14 @@ public abstract class CollisionHelper<B, F, R> {
         this.emptyFloorState = emptyFloorState;
         final double width2 = width * 0.5;
         box = new Box(0.5 - width2, 0.0D, 0.5 - width2, 0.5 + width2, height, 0.5 + width2);
-        floorBox = new Box(0.5 - width2, 0.998, 0.5 - width2, 0.5 + width2, 0.999, 0.5 + width2);
+        floorBox = new Box(0.5 - width2, 15 / 16.0, 0.5 - width2, 0.5 + width2, 1.0, 0.5 + width2);
         boxShape = VoxelShapes.cuboid(box);
         floorShape = VoxelShapes.cuboid(floorBox);
+        cachedHeights = new double[CACHE_SIZE];
+        for (int i = 0; i < CACHE_SIZE; i++) {
+            cachedHeights[i] = Double.NaN;
+        }
+        cachedBoxShapes = new VoxelShape[CACHE_SIZE];
+        cachedFloorShapes = new VoxelShape[CACHE_SIZE];
     }
 }

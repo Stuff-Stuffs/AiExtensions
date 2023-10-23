@@ -1,6 +1,7 @@
 package io.github.stuff_stuffs.aiex_test.common.entity;
 
 import com.mojang.datafixers.util.Unit;
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.pathing.location_caching.LocationClassifier;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrain;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
@@ -12,6 +13,9 @@ import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceReposi
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicNpcEntityPather;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicPathingUniverse;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.PathingNpcEntity;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import io.github.stuff_stuffs.aiex_test.common.basic.BasicBrainNodes;
 import net.minecraft.entity.EntityType;
@@ -24,19 +28,21 @@ import net.minecraft.util.Arm;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
-public class TestEntity extends AbstractNpcEntity {
+public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
     private static final TrackedData<Boolean> SLIM_DATA = DataTracker.registerData(TestEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private final AiBrain brain;
-    private final BasicEntityPather navigator;
+    private final BasicNpcEntityPather navigator;
 
     protected TestEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
-        navigator = new BasicEntityPather(this);
+        navigator = new BasicNpcEntityPather(this);
         final BrainNode<TestEntity, BasicTasks.Walk.Result, Vec3d> walk = BrainNodes.expectResult(new TaskBrainNode<>(BasicTasks.Walk.KEY, (BiFunction<Vec3d, BrainContext<TestEntity>, BasicTasks.Walk.Parameters>) (vec3d, context) -> new BasicTasks.Walk.Parameters() {
             @Override
             public Vec3d target() {
@@ -64,7 +70,7 @@ public class TestEntity extends AbstractNpcEntity {
         updateSlim();
     }
 
-    public BasicEntityPather getNavigator() {
+    public BasicNpcEntityPather getNavigator() {
         return navigator;
     }
 
@@ -92,7 +98,6 @@ public class TestEntity extends AbstractNpcEntity {
     @Override
     public void tick() {
         super.tick();
-        navigator.tick();
     }
 
     public void slim(final boolean slim) {
@@ -111,5 +116,20 @@ public class TestEntity extends AbstractNpcEntity {
     @Override
     public Arm getMainArm() {
         return Arm.RIGHT;
+    }
+
+    @Override
+    public int ensuredPathingRadius() {
+        return 3;
+    }
+
+    @Override
+    public int pathingCachePollRate() {
+        return 40;
+    }
+
+    @Override
+    public Collection<LocationClassifier<?>> ensuredLocationClassifiers() {
+        return Collections.singleton(BasicPathingUniverse.CLASSIFIER);
     }
 }

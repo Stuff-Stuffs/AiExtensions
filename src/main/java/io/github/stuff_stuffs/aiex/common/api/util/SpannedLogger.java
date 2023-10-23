@@ -4,9 +4,11 @@ import io.github.stuff_stuffs.aiex.common.impl.util.NoopSpannedLoggerImpl;
 import io.github.stuff_stuffs.aiex.common.impl.util.SpannedLoggerImpl;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.zip.GZIPOutputStream;
 
 public interface SpannedLogger extends AutoCloseable {
     SpannedLogger open(String span);
@@ -48,7 +50,7 @@ public interface SpannedLogger extends AutoCloseable {
 
     static SpannedLogger create(final Level level, final String prefix, final Path path) {
         try {
-            return new SpannedLoggerImpl(level, Files.newOutputStream(path), prefix);
+            return new SpannedLoggerImpl(level, new BufferedOutputStream(new GZIPOutputStream(Files.newOutputStream(path))), prefix);
         } catch (final IOException e) {
             AiExCommon.LOGGER.error("Could not create spanned logger! Fallback to noop", e);
             return new NoopSpannedLoggerImpl();

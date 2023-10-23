@@ -31,6 +31,7 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 
 import java.util.*;
@@ -137,6 +138,19 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
                 return HashCommon.murmurHash3(seed + age ^ HashCommon.murmurHash3(randomifier++));
             }
         };
+    }
+
+    @Override
+    public ServerPlayerEntity fakePlayerDelegate() {
+        if (fakePlayer == null) {
+            throw new NullPointerException();
+        }
+        return fakePlayer;
+    }
+
+    @Override
+    public boolean hasFakePlayerDelegate() {
+        return fakePlayer != null;
     }
 
     @Override

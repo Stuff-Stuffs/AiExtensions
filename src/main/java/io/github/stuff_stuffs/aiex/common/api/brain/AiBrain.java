@@ -9,8 +9,13 @@ import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import io.github.stuff_stuffs.aiex.common.impl.brain.AiBrainImpl;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.network.ServerPlayerEntity;
 
 public interface AiBrain extends AiBrainView {
+    ServerPlayerEntity fakePlayerDelegate();
+
+    boolean hasFakePlayerDelegate();
+
     void tick();
 
     void writeNbt(NbtCompound nbt);

@@ -6,4 +6,6 @@ public interface InternalServerExtensions {
     EntityReferenceContainer aiex$entityRefContainer();
 
     LevelStorage.Session aiex$session();
+
+    void aiex$submitTask(Runnable task);
 }

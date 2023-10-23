@@ -1,8 +1,8 @@
 package io.github.stuff_stuffs.aiex.common.api.entity.pathing;
 
-import io.github.stuff_stuffs.advanced_ai.common.api.pathing.location_caching.LocationClassifier;
-import io.github.stuff_stuffs.advanced_ai.common.api.util.ShapeCache;
-import io.github.stuff_stuffs.advanced_ai.common.api.util.UniverseInfo;
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.pathing.location_caching.LocationClassifier;
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.ShapeCache;
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.UniverseInfo;
 import io.github.stuff_stuffs.aiex.common.api.util.CollisionHelper;
 import io.github.stuff_stuffs.aiex.common.api.util.tag.CombinedDenseBlockTagSet;
 import io.github.stuff_stuffs.aiex.common.api.util.tag.DenseBlockTagSet;
@@ -21,7 +21,7 @@ public enum BasicPathingUniverse {
     BLOCKED(false, false, 1.0),
     OPEN(false, true, 1.0),
     FLOOR(true, false, 1.0),
-    WATER(true, true, 1.5),
+    WATER(true, true, 6.0),
     LAVA(true, true, 128),
     DANGER(false, true, 24),
     DANGER_FLOOR(true, false, 24),
@@ -67,6 +67,9 @@ public enum BasicPathingUniverse {
 
         @Override
         protected BasicPathingUniverse bothCollision(final Long box, final Long floor) {
+            if ((Flag.DOOR.mask & box) != 0) {
+                return OPENABLE_DOOR;
+            }
             if ((Flag.DANGER.mask & box) != 0 || (Flag.DANGER.mask & floor) != 0) {
                 return floor < 0 ? DANGER_FLOOR : DANGER;
             }
@@ -78,7 +81,7 @@ public enum BasicPathingUniverse {
 
         @Override
         protected boolean shouldFloorReturnEarly(final Long state) {
-            return state < 0;
+            return false;
         }
 
         @Override
@@ -147,11 +150,11 @@ public enum BasicPathingUniverse {
             if (relY > 16 | relY < -1) {
                 return false;
             }
-            if (relY == -1) {
-                return true;
-            }
             if (Flag.DOOR.set.isIn(oldState.getBlock()) && Flag.DOOR.set.isIn(newState.getBlock())) {
                 return false;
+            }
+            if (relY == -1) {
+                return true;
             }
             final boolean xAdj = (relX == -1 | relX == 16);
             final boolean zAdj = (relZ == -1 | relZ == 16);
