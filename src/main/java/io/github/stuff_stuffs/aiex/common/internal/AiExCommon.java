@@ -5,7 +5,6 @@ import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.AiExGameRules;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.mine.BasicMiningUniverse;
@@ -58,7 +57,6 @@ public class AiExCommon implements ModInitializer {
         AiExApi.init();
         AiBrainEventTypes.init();
         AiExGameRules.init();
-        Memories.init();
         BasicTasks.init();
         BrainConfig.Key.init();
         EntityReferenceDataType.REGISTRY.getCodec();

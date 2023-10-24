@@ -4,7 +4,6 @@ import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventType;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.TypeFilter;
@@ -17,33 +16,6 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 public final class BrainNodeTargets {
-    public static <C, R, FC, T> BrainNode<C, Optional<R>, FC> memoryTarget(final Memory<T> memory, final BiFunction<T, FC, Optional<R>> factory, final boolean dynamic) {
-        return new AbstractSingleTargetingBrainNode<>(dynamic) {
-            @Override
-            protected Optional<R> query(final BrainContext<C> context, final FC arg) {
-                final AiBrainView.Memories memories = context.brain().memories();
-                if (!memories.has(memory)) {
-                    return Optional.empty();
-                }
-                return factory.apply(memories.get(memory).get(), arg);
-            }
-        };
-    }
-
-    public static <C, R, FC, T> BrainNode<C, Optional<R>, FC> memoryTarget(final BiFunction<BrainContext<C>, FC, Memory<T>> memoryFunc, final BiFunction<T, FC, Optional<R>> factory, final boolean dynamic) {
-        return new AbstractSingleTargetingBrainNode<>(dynamic) {
-            @Override
-            protected Optional<R> query(final BrainContext<C> context, final FC arg) {
-                final Memory<T> memory = memoryFunc.apply(context, arg);
-                final AiBrainView.Memories memories = context.brain().memories();
-                if (!memories.has(memory)) {
-                    return Optional.empty();
-                }
-                return factory.apply(memories.get(memory).get(), arg);
-            }
-        };
-    }
-
     public static <C extends Entity, E extends Entity, FC> BrainNode<C, Optional<E>, FC> entityTarget(final TypeFilter<Entity, E> typeFilter, final EntityFilter<C, E, FC> filter, final boolean dynamic, final int range) {
         return new AbstractSingleTargetingBrainNode<>(dynamic) {
             @Override

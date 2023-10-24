@@ -5,7 +5,6 @@ import io.github.stuff_stuffs.advanced_ai_pathing.common.api.pathing.location_ca
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrain;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
@@ -66,7 +65,7 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
             }
         });
         final BrainNode<TestEntity, Unit, Unit> root = BasicBrainNodes.<TestEntity>nearestPlayer().ifThen((context, d) -> d.isPresent(), walk.discardResult().adaptArg(Optional::get), BrainNodes.empty());
-        brain = AiBrain.create(this, root, BrainConfig.builder().build(), MemoryConfig.builder().build(this), TaskConfig.<TestEntity>builder().build(this), AiExCommon.createForEntity(this));
+        brain = AiBrain.create(this, root, BrainConfig.builder().build(), TaskConfig.<TestEntity>builder().build(this), AiExCommon.createForEntity(this));
         updateSlim();
     }
 

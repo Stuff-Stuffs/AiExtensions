@@ -2,7 +2,6 @@ package io.github.stuff_stuffs.aiex.common.api.brain;
 
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
@@ -22,7 +21,7 @@ public interface AiBrain extends AiBrainView {
 
     void readNbt(NbtCompound nbt);
 
-    static <T extends Entity> AiBrain create(final T entity, final BrainNode<T, Unit, Unit> root, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig, SpannedLogger logger) {
-        return new AiBrainImpl<>(entity, root, config, memoryConfig, taskConfig, entity.getEntityWorld().random.nextLong(), logger);
+    static <T extends Entity> AiBrain create(final T entity, final BrainNode<T, Unit, Unit> root, final BrainConfig config, final TaskConfig<T> taskConfig, SpannedLogger logger) {
+        return new AiBrainImpl<>(entity, root, config, taskConfig, entity.getEntityWorld().random.nextLong(), logger);
     }
 }

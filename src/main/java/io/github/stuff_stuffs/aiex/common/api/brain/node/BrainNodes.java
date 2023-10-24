@@ -3,8 +3,6 @@ package io.github.stuff_stuffs.aiex.common.api.brain.node;
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryEntry;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
@@ -55,19 +53,6 @@ public final class BrainNodes {
 
     public static <C, R0, R1, FC> BrainNode<C, R1, FC> present(final BrainNode<C, Optional<R0>, FC> source, final BrainNode<C, R1, R0> present, final BrainNode<C, R1, Unit> absent) {
         return source.ifThen((context, r0) -> r0.isPresent(), present.adaptArg(Optional::get), absent.adaptArg(p -> Unit.INSTANCE));
-    }
-
-    public static <C, R, FC> BrainNode<C, Optional<R>, FC> remembering(final BiFunction<BrainContext<C>, FC, Memory<R>> memoryFunc, final BiFunction<FC, R, R> combiner) {
-        return terminal((context, fc) -> {
-            final Memory<R> memory = memoryFunc.apply(context, fc);
-            final AiBrainView.Memories memories = context.brain().memories();
-            if (!memories.has(memory)) {
-                return Optional.empty();
-            }
-            final MemoryEntry<R> entry = memories.get(memory);
-            entry.set(combiner.apply(fc, entry.get()));
-            return Optional.of(entry.get());
-        });
     }
 
     public static <C, R, FC> BrainNode<C, R, FC> expect(final BrainNode<C, Optional<R>, FC> node, final Supplier<? extends RuntimeException> errorFactory) {

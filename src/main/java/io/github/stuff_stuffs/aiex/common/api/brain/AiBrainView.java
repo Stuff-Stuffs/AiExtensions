@@ -4,10 +4,13 @@ import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventType;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryEntry;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryName;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryReference;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryType;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public interface AiBrainView {
@@ -52,8 +55,20 @@ public interface AiBrainView {
     }
 
     interface Memories {
-        boolean has(Memory<?> memory);
+        boolean has(MemoryName<?> memory);
 
-        <T> MemoryEntry<T> get(Memory<T> memory);
+        boolean has(MemoryReference<?> reference);
+
+        <T> Optional<Memory<T>> get(MemoryName<T> memory);
+
+        <T> Optional<Memory<T>> get(MemoryReference<T> memory);
+
+        <T> MemoryReference<T> add(MemoryType<T> type, T value);
+
+        <T> void put(MemoryName<T> name, T value);
+
+        boolean forget(MemoryReference<?> memory);
+
+        boolean forget(MemoryName<?> name);
     }
 }

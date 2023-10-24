@@ -7,9 +7,6 @@ import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventType;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryConfig;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryEntry;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
@@ -17,14 +14,13 @@ import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiFakePlayer;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
-import io.github.stuff_stuffs.aiex.common.impl.brain.memory.MemoryEntryImpl;
+import io.github.stuff_stuffs.aiex.common.impl.brain.memory.MemoriesImpl;
 import io.github.stuff_stuffs.aiex.common.impl.brain.resource.AbstractBrainResourcesImpl;
 import io.github.stuff_stuffs.aiex.common.impl.brain.resource.BrainResourcesImpl;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap;
 import net.minecraft.entity.Entity;
 import net.minecraft.nbt.NbtCompound;
@@ -51,14 +47,14 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
     private long age;
     private boolean init = false;
 
-    public AiBrainImpl(final T entity, final BrainNode<T, Unit, Unit> node, final BrainConfig config, final MemoryConfig memoryConfig, final TaskConfig<T> taskConfig, final long seed, final SpannedLogger logger) {
+    public AiBrainImpl(final T entity, final BrainNode<T, Unit, Unit> node, final BrainConfig config, final TaskConfig<T> taskConfig, final long seed, final SpannedLogger logger) {
         this.entity = entity;
         rootNode = node;
         this.config = config;
         this.seed = seed;
         this.logger = logger;
         handler = new EventHandler();
-        memories = new MemoriesImpl(memoryConfig, this);
+        memories = new MemoriesImpl();
         this.taskConfig = taskConfig;
         resources = new BrainResourcesImpl();
     }
@@ -160,18 +156,6 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
         }
         age++;
         handler.tick(age);
-        if (memories.has(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_ATTACK_COOLDOWN)) {
-            final MemoryEntry<Integer> entry = memories.get(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_ATTACK_COOLDOWN);
-            if (entry.get() > 0) {
-                entry.set(entry.get() - 1);
-            }
-        }
-        if (memories.has(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_USE_COOLDOWN)) {
-            final MemoryEntry<Integer> entry = memories.get(io.github.stuff_stuffs.aiex.common.api.brain.memory.Memories.ITEM_USE_COOLDOWN);
-            if (entry.get() > 0) {
-                entry.set(entry.get() - 1);
-            }
-        }
         try (final SpannedLogger child = logger.open("root")) {
             final BrainContext<T> context = createContext();
             if (!init) {
@@ -202,13 +186,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             }
         }
         nbt.put("events", list);
-        final NbtList memoryList = new NbtList();
-        for (final MemoryEntryImpl<?> value : memories.map.values()) {
-            final NbtCompound compound = new NbtCompound();
-            value.writeNbt(compound);
-            memoryList.add(compound);
-        }
-        nbt.put("memories", memoryList);
+        nbt.put("memories", memories.writeNbt());
     }
 
     @Override
@@ -232,17 +210,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
                 handler.submit(new EventEntry(event.get(), wrapper.getLong("timestamp"), wrapper.getLong("expiration")));
             }
         }
-        memories.clear();
-        final NbtList memoriesList = nbt.getList("memories", NbtElement.COMPOUND_TYPE);
-        for (final NbtElement element : memoriesList) {
-            final Optional<? extends MemoryEntryImpl<?>> read = MemoryEntryImpl.read((NbtCompound) element, this);
-            if (read.isPresent()) {
-                final MemoryEntryImpl<?> entry = read.get();
-                if (memories.map.containsKey(entry.type())) {
-                    memories.map.put(entry.type(), entry);
-                }
-            }
-        }
+        memories.readNbt(nbt.getCompound("memories"));
     }
 
     @Override
@@ -462,57 +430,6 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
         @Override
         public int hashCode() {
             return event == null ? 0 : event.hashCode();
-        }
-    }
-
-    private static final class MemoriesImpl implements Memories {
-        private final Map<Memory<?>, MemoryEntryImpl<?>> map;
-        private final MemoryConfig config;
-        private final AiBrainImpl<?> brain;
-
-        private MemoriesImpl(final MemoryConfig config, final AiBrainImpl<?> brain) {
-            this.config = config;
-            this.brain = brain;
-            map = new Reference2ObjectOpenHashMap<>();
-            clear();
-        }
-
-        private void clear() {
-            map.clear();
-            for (final Memory<?> key : config.keys()) {
-                setup(key, config);
-            }
-            for (final Memory<?> memory : map.keySet()) {
-                for (final Memory<?> dep : memory.listeningTo()) {
-                    map.get(dep).addListener(memory);
-                }
-                for (final Memory<?> optDep : memory.optionalListeningTo()) {
-                    final MemoryEntryImpl<?> entry = map.get(optDep);
-                    if (entry != null) {
-                        entry.addListener(memory);
-                    }
-                }
-            }
-        }
-
-        private <T> void setup(final Memory<T> memory, final MemoryConfig config) {
-            final T value = config.defaultValue(memory);
-            map.put(memory, new MemoryEntryImpl<>(memory, brain, value));
-        }
-
-        @Override
-        public boolean has(final Memory<?> memory) {
-            return map.containsKey(memory);
-        }
-
-        @Override
-        public <T> MemoryEntry<T> get(final Memory<T> memory) {
-            final MemoryEntry<?> entry = map.get(memory);
-            if (entry == null) {
-                throw new IllegalArgumentException();
-            }
-            //noinspection unchecked
-            return (MemoryEntry<T>) entry;
         }
     }
 }
