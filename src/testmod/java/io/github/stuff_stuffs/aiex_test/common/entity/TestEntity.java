@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex_test.common.entity;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.advanced_ai_pathing.common.api.pathing.location_caching.LocationClassifier;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrain;
@@ -7,6 +8,8 @@ import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.BasicBrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.MineBlockBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
@@ -16,14 +19,18 @@ import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicNpcEntityPathe
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicPathingUniverse;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.PathingNpcEntity;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
-import io.github.stuff_stuffs.aiex_test.common.basic.BasicBrainNodes;
+import io.github.stuff_stuffs.aiex.common.internal.entity.DelegatingPlayerInventory;
+import io.github.stuff_stuffs.aiex_test.common.basic.BasicTestBrainNodes;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Arm;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
@@ -38,6 +45,7 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
     private static final TrackedData<Boolean> SLIM_DATA = DataTracker.registerData(TestEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private final AiBrain brain;
     private final BasicNpcEntityPather navigator;
+    private final DelegatingPlayerInventory inventory;
 
     protected TestEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
@@ -63,10 +71,26 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
                 }
                 return false;
             }
-        });
-        final BrainNode<TestEntity, Unit, Unit> root = BasicBrainNodes.<TestEntity>nearestPlayer().ifThen((context, d) -> d.isPresent(), walk.discardResult().adaptArg(Optional::get), BrainNodes.empty());
-        brain = AiBrain.create(this, root, BrainConfig.builder().build(), TaskConfig.<TestEntity>builder().build(this), AiExCommon.createForEntity(this));
+        }).ifThenFallthrough((context, result) -> result.getFirst() == BasicTasks.Walk.Result.DONE, BasicBrainNodes.<TestEntity>mine().adaptResult((context, result) -> {
+            if (result instanceof MineBlockBrainNode.Broken) {
+                return BasicTasks.Walk.Result.DONE;
+            }
+            return BasicTasks.Walk.Result.CONTINUE;
+        }).adaptArg((context, pair) -> new BasicBrainNodes.MineParameters(BrainResourceRepository.buildEmpty(context.brain().resources()), BlockPos.ofFloored(pair.getSecond()).down())), BrainNodes.constant(BasicTasks.Walk.Result.CONTINUE), Pair::of);
+        final BrainNode<TestEntity, Unit, Unit> root = BasicTestBrainNodes.<TestEntity>nearestPlayer().ifThen((context, d) -> d.isPresent(), walk.discardResult().adaptArg(Optional::get), BrainNodes.empty());
+        if (world instanceof ServerWorld) {
+            brain = AiBrain.create(this, root, BrainConfig.builder().build(), TaskConfig.<TestEntity>builder().build(this), AiExCommon.createForEntity(this));
+            inventory = new DelegatingPlayerInventory(aiex$getBrain().fakePlayerDelegate(), getNpcInventory());
+        } else {
+            brain = null;
+            inventory = null;
+        }
         updateSlim();
+    }
+
+    @Override
+    public PlayerInventory getInventory() {
+        return inventory;
     }
 
     public BasicNpcEntityPather getNavigator() {

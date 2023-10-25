@@ -29,6 +29,13 @@ public class BrainResourceRepositoryImpl implements BrainResourceRepository {
         return resources.get(resource);
     }
 
+    @Override
+    public void clear() {
+        for (final BrainResources.Token value : tokens.values()) {
+            resources.release(value);
+        }
+    }
+
     public static final class BuilderImpl implements Builder {
         private final Map<BrainResource, BrainResources.Token> tokens;
 
@@ -40,6 +47,17 @@ public class BrainResourceRepositoryImpl implements BrainResourceRepository {
         public Builder add(final BrainResources.Token token) {
             if (token.active()) {
                 tokens.put(token.resource(), token);
+            }
+            return this;
+        }
+
+        @Override
+        public Builder addAll(final BrainResourceRepository repository) {
+            for (final Map.Entry<BrainResource, BrainResources.Token> entry : ((BrainResourceRepositoryImpl) repository).tokens.entrySet()) {
+                final Optional<BrainResources.Token> child = ((AbstractBrainResourcesImpl) (((BrainResourceRepositoryImpl) repository).resources)).createChild(entry.getValue());
+                if (child.isPresent()) {
+                    tokens.putIfAbsent(entry.getKey(), child.get());
+                }
             }
             return this;
         }

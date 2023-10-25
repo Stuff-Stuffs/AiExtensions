@@ -144,20 +144,17 @@ public enum BasicPathingUniverse {
 
         @Override
         public boolean needsRebuild(final int chunkSectionX, final int chunkSectionY, final int chunkSectionZ, final int otherChunkSectionX, final int otherChunkSectionY, final int otherChunkSectionZ, final int x, final int y, final int z, final ShapeCache cache, final BlockState oldState, final BlockState newState) {
-            final int relX = x - chunkSectionX * 16;
-            final int relY = y - chunkSectionY * 16;
-            final int relZ = z - chunkSectionZ * 16;
-            if (relY > 16 | relY < -1) {
+            if (y > 16 | y < -1) {
                 return false;
             }
             if (Flag.DOOR.set.isIn(oldState.getBlock()) && Flag.DOOR.set.isIn(newState.getBlock())) {
                 return false;
             }
-            if (relY == -1) {
+            if (y == -1) {
                 return true;
             }
-            final boolean xAdj = (relX == -1 | relX == 16);
-            final boolean zAdj = (relZ == -1 | relZ == 16);
+            final boolean xAdj = (x == -1 | x == 16);
+            final boolean zAdj = (z == -1 | z == 16);
             return xAdj | zAdj;
         }
 

@@ -12,6 +12,7 @@ import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.PathingNpcEntity;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleSlotStorage;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
@@ -19,6 +20,7 @@ import net.minecraft.entity.ai.control.MoveControl;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.ItemCooldownManager;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.FoodComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
@@ -26,6 +28,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.random.Random;
@@ -33,6 +36,8 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 @SuppressWarnings("UnstableApiUsage")
 public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
@@ -54,6 +59,9 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
         hungerManager = createHungerManager(world);
         npcMoveControl = createNpcMoveControl();
     }
+
+    @AiFakePlayer.EnsureDelegateGeneration
+    public abstract PlayerInventory getInventory();
 
     public NpcMoveControl getNpcMoveControl() {
         return npcMoveControl;
@@ -77,7 +85,7 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
         return cooldownManager;
     }
 
-    public NpcInventory getInventory() {
+    public NpcInventory getNpcInventory() {
         return inventory;
     }
 
@@ -128,17 +136,32 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
             hungerManager.tick(this);
             npcMoveControl.tick();
             final EntityPather pather = AiExApi.ENTITY_NAVIGATOR.find(this, null);
-            if(pather!=null) {
+            if (pather != null) {
                 pather.tick();
             }
             if (this instanceof PathingNpcEntity pathing && age % pathing.pathingCachePollRate() == 0) {
                 final ChunkPos pos = getChunkPos();
                 final int rad = pathing.ensuredPathingRadius();
                 final int minY = Math.max(world.getBottomSectionCoord(), ChunkSectionPos.getSectionCoord(getBlockY()) - rad);
-                final int maxY = Math.max(world.getTopSectionCoord() - 1, ChunkSectionPos.getSectionCoord(getBlockY()) + rad);
+                final int maxY = Math.min(world.getTopSectionCoord() - 1, ChunkSectionPos.getSectionCoord(getBlockY()) + rad);
                 final ChunkSectionPos min = ChunkSectionPos.from(pos.x - rad, minY, pos.z - rad);
                 final ChunkSectionPos max = ChunkSectionPos.from(pos.x + rad, maxY, pos.z + rad);
                 AiExApi.submitTask(new EnsurePathingValidTask(world, min, max, pathing.ensuredLocationClassifiers()), world);
+            }
+
+            if (aiex$getBrain().hasFakePlayerDelegate() && getHealth() > 0.0F && !isSpectator()) {
+                final Box box;
+                if (hasVehicle() && !getVehicle().isRemoved()) {
+                    box = getBoundingBox().union(getVehicle().getBoundingBox()).expand(1.0, 0.0, 1.0);
+                } else {
+                    box = getBoundingBox().expand(1.0, 0.5, 1.0);
+                }
+
+                final List<Entity> list = getWorld().getOtherEntities(this, box);
+
+                for (final Entity entity : list) {
+                    entity.onPlayerCollision(aiex$getBrain().fakePlayerDelegate());
+                }
             }
         }
         super.tick();

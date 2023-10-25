@@ -3,7 +3,6 @@ package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
@@ -26,20 +25,20 @@ public class DefaultSwapStackTask<T extends Entity> implements BrainNode<T, Basi
     }
 
     @Override
-    public void init(final BrainContext<T> context, SpannedLogger logger) {
+    public void init(final BrainContext<T> context, final SpannedLogger logger) {
 
     }
 
     @Override
-    public BasicTasks.SwapStack.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, SpannedLogger logger) {
-        try(var l = logger.open("DefaultSwapStack")) {
+    public BasicTasks.SwapStack.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, final SpannedLogger logger) {
+        try (final var l = logger.open("DefaultSwapStack")) {
             final NpcInventory inventory = AiExApi.NPC_INVENTORY.find(context.entity(), null);
             if (inventory == null) {
                 throw new IllegalStateException();
             }
             if (sourceToken == null || !sourceToken.active()) {
                 l.debug("Trying to acquire source token");
-                sourceToken = arg.get(parameters.source().map(BrainResource::ofInventorySlot, BrainResource::ofEquipmentSlot)).orElse(null);
+                sourceToken = arg.get(parameters.source().resource()).orElse(null);
                 if (sourceToken == null) {
                     l.debug("Failed!");
                     return BasicTasks.SwapStack.Result.RESOURCE_ACQUISITION_ERROR;
@@ -48,7 +47,7 @@ public class DefaultSwapStackTask<T extends Entity> implements BrainNode<T, Basi
             }
             if (destinationToken == null || !destinationToken.active()) {
                 l.debug("Trying to acquire destination token");
-                destinationToken = arg.get(parameters.destination().map(BrainResource::ofInventorySlot, BrainResource::ofEquipmentSlot)).orElse(null);
+                destinationToken = arg.get(parameters.destination().resource()).orElse(null);
                 if (sourceToken == null) {
                     l.debug("Failed!");
                     return BasicTasks.SwapStack.Result.RESOURCE_ACQUISITION_ERROR;
@@ -56,8 +55,8 @@ public class DefaultSwapStackTask<T extends Entity> implements BrainNode<T, Basi
                 l.debug("Success");
             }
             try (final Transaction transaction = Transaction.openOuter()) {
-                final SingleSlotStorage<ItemVariant> source = parameters.source().map(i -> inventory.main().getSlot(i), slot -> inventory.equipment().getSlot(slot.getArmorStandSlotId()));
-                final SingleSlotStorage<ItemVariant> destination = parameters.destination().map(i -> inventory.main().getSlot(i), slot -> inventory.equipment().getSlot(slot.getArmorStandSlotId()));
+                final SingleSlotStorage<ItemVariant> source = parameters.source().slot(inventory);
+                final SingleSlotStorage<ItemVariant> destination = parameters.destination().slot(inventory);
                 final ItemVariant sourceItem = source.getResource();
                 final ItemVariant destinationItem = destination.getResource();
                 final long takenSource = source.extract(sourceItem, source.getAmount(), transaction);
@@ -76,7 +75,7 @@ public class DefaultSwapStackTask<T extends Entity> implements BrainNode<T, Basi
     }
 
     @Override
-    public void deinit(final BrainContext<T> context, SpannedLogger logger) {
+    public void deinit(final BrainContext<T> context, final SpannedLogger logger) {
         if (sourceToken == null || !sourceToken.active()) {
             context.brain().resources().release(sourceToken);
             sourceToken = null;

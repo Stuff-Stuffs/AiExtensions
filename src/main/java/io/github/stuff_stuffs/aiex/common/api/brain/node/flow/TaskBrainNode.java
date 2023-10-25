@@ -39,7 +39,7 @@ public class TaskBrainNode<C, R, P, FC, FC0> implements BrainNode<C, TaskBrainNo
                 return new Failure<>();
             }
             if (task == null) {
-                final Optional<BrainNode<C, R, FC0>> task = context.createTask(key, parameterFactory.apply(arg, context));
+                final Optional<BrainNode<C, R, FC0>> task = context.createTask(key, parameterFactory.apply(arg, context), child);
                 if (task.isPresent()) {
                     this.task = task.get();
                 } else {

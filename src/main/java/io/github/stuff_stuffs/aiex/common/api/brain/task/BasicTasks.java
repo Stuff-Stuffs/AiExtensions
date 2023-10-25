@@ -1,20 +1,27 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
-import com.mojang.datafixers.util.Either;
+import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
+import io.github.stuff_stuffs.aiex.common.api.util.InventorySlot;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.SlottedStorage;
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registry;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 public final class BasicTasks {
@@ -182,12 +189,77 @@ public final class BasicTasks {
         }
 
         public interface Parameters {
-            Either<Integer, EquipmentSlot> source();
+            InventorySlot source();
 
-            Either<Integer, EquipmentSlot> destination();
+            InventorySlot destination();
         }
 
         private SwapStack() {
+        }
+    }
+
+    public static final class SelectToolTask {
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
+
+        public sealed interface Result {
+        }
+
+        public record NoneAvailableError() implements Result {
+        }
+
+        public record Success(List<InventorySlot> bestToWorst) implements Result {
+        }
+
+        public interface Parameters {
+            BlockState state();
+        }
+
+        private SelectToolTask() {
+        }
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    public static final class MoveItemsToContainerTask {
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
+
+        public sealed interface Result {
+            Object2LongMap<ItemVariant> moved();
+        }
+
+        public record Continue(Object2LongMap<ItemVariant> moved) implements Result {
+        }
+
+        public record Success(Object2LongMap<ItemVariant> moved) implements Result {
+        }
+
+        public record Error(ErrorType type, Object2LongMap<ItemVariant> moved) implements Result {
+        }
+
+        public enum ErrorType {
+            CANNOT_REACH,
+            MISSING_CONTAINER
+        }
+
+        public interface Parameters {
+            Filter filter();
+
+            BlockPos container();
+
+            @Nullable Direction side();
+
+            default int speed() {
+                return 10;
+            }
+        }
+
+        public interface Filter {
+            Amount filter(BrainContext<?> context, ItemVariant variant, long amount, InventorySlot slot, SlottedStorage<ItemVariant> container);
+        }
+
+        public record Amount(long amount, OptionalInt target) {
+        }
+
+        private MoveItemsToContainerTask() {
         }
     }
 
@@ -201,6 +273,8 @@ public final class BasicTasks {
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_look_entity"), Look.ENTITY_DYNAMIC_KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_use_item"), UseItem.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("swap_stack"), SwapStack.KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("select_tool"), SelectToolTask.KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("move_items_to_container"), MoveItemsToContainerTask.KEY);
     }
 
     private BasicTasks() {

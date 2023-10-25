@@ -7,21 +7,21 @@ import io.github.stuff_stuffs.aiex.common.api.util.tag.DenseBlockTagSet;
 import net.fabricmc.fabric.api.mininglevel.v1.FabricMineableTags;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
 
 public enum BasicMiningUniverse {
     NONE,
-    AXE(TagKey.of(RegistryKeys.BLOCK, new Identifier("minecraft", "mineable/axe")), true),
-    PICKAXE(TagKey.of(RegistryKeys.BLOCK, new Identifier("minecraft", "mineable/pickaxe")), true),
-    SHOVEL(TagKey.of(RegistryKeys.BLOCK, new Identifier("minecraft", "mineable/shovel")), false),
-    HOE(TagKey.of(RegistryKeys.BLOCK, new Identifier("minecraft", "mineable/hoe")), false),
+    AXE(BlockTags.AXE_MINEABLE, true),
+    PICKAXE(BlockTags.PICKAXE_MINEABLE, true),
+    SHOVEL(BlockTags.SHOVEL_MINEABLE, false),
+    HOE(BlockTags.HOE_MINEABLE, false),
     SHEARS(FabricMineableTags.SHEARS_MINEABLE, false),
-    SWORD(FabricMineableTags.SWORD_MINEABLE, true);
+    SWORD(FabricMineableTags.SWORD_MINEABLE, true),
+    SWORD_EFFICIENT(BlockTags.SWORD_EFFICIENT, false);
     public static final UniverseInfo<BasicMiningUniverse> UNIVERSE_INFO = UniverseInfo.fromEnum(BasicMiningUniverse.class);
     public static final LocationClassifier<BasicMiningUniverse> CLASSIFIER = new LocationClassifier<>() {
-        private static final BasicMiningUniverse[] EXCEPT_NONE = new BasicMiningUniverse[]{AXE, PICKAXE, SHOVEL, SHEARS, SWORD, HOE};
+        private static final BasicMiningUniverse[] EXCEPT_NONE = new BasicMiningUniverse[]{AXE, PICKAXE, SHOVEL, SHEARS, SWORD, HOE, SWORD_EFFICIENT};
 
         @Override
         public BasicMiningUniverse get(final int x, final int y, final int z, final ShapeCache cache) {
@@ -52,19 +52,16 @@ public enum BasicMiningUniverse {
             return UNIVERSE_INFO;
         }
     };
-    private final TagKey<Block> tag;
     private final DenseBlockTagSet tagSet;
     public final boolean needed;
 
 
     BasicMiningUniverse() {
-        tag = null;
         tagSet = null;
         needed = false;
     }
 
     BasicMiningUniverse(final TagKey<Block> tag, final boolean needed) {
-        this.tag = tag;
         tagSet = DenseBlockTagSet.get(tag);
         this.needed = needed;
     }

@@ -91,7 +91,7 @@ public class DefaultEntityLookTask<T extends Entity> implements BrainNode<T, Bas
                         public double lookSpeed() {
                             return lookSpeed;
                         }
-                    });
+                    }, l);
                     delegate = task.orElseGet(() -> BrainNodes.constant(BasicTasks.Look.Result.FAILED));
                 }
             }

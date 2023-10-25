@@ -24,7 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.ToDoubleFunction;
 
-public final class BasicBrainNodes {
+public final class BasicTestBrainNodes {
     public static <C extends Entity> BrainNode<C, Optional<Vec3d>, Unit> nearestPlayer() {
         return new BrainNode<>() {
             @Override
@@ -106,6 +106,6 @@ public final class BasicBrainNodes {
     }
 
 
-    private BasicBrainNodes() {
+    private BasicTestBrainNodes() {
     }
 }

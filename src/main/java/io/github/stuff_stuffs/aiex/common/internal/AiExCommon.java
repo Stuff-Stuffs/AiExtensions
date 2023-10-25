@@ -74,7 +74,7 @@ public class AiExCommon implements ModInitializer {
                 final LevelStorage.Session session = ((InternalServerExtensions) serverWorld.getServer()).aiex$session();
                 final Path directory = Files.createDirectories(session.getDirectory(ENTITY_LOG_SAVE_PATH));
                 final Path path = directory.resolve(entity.getUuidAsString() + ".log.xml.gz");
-                return SpannedLogger.create(SpannedLogger.Level.DEBUG, "Entity", path);
+                return SpannedLogger.create(SpannedLogger.Level.WARNING, "Entity", path);
             } catch (final IOException ignored) {
             }
         }

@@ -11,6 +11,7 @@ import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import io.github.stuff_stuffs.aiex.common.internal.InternalServerExtensions;
 import io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls.*;
 import net.fabricmc.fabric.api.lookup.v1.entity.EntityApiLookup;
+import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -25,6 +26,8 @@ public final class AiExApi {
     public static final EntityApiLookup<NpcInventory, Void> NPC_INVENTORY = EntityApiLookup.get(AiExCommon.id("npc_inventory"), NpcInventory.class, Void.class);
 
     public static final TagKey<EntityType<?>> PROJECTILE_ENTITY_TAG = TagKey.of(RegistryKeys.ENTITY_TYPE, AiExCommon.id("projectile"));
+    public static final TagKey<Block> MINEABLE_STONE_TAG = TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_stone_mineable"));
+    public static final TagKey<Block> MINEABLE_ORE_TAG = TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_ore_mineable"));
 
     public static void submitTask(final Runnable runnable, final ServerWorld world) {
         ((InternalServerExtensions) world.getServer()).aiex$submitTask(runnable);
@@ -39,7 +42,7 @@ public final class AiExApi {
         });
         NPC_INVENTORY.registerFallback((entity, context) -> {
             if (entity instanceof AbstractNpcEntity npc) {
-                return npc.getInventory();
+                return npc.getNpcInventory();
             }
             return null;
         });
@@ -100,12 +103,30 @@ public final class AiExApi {
             accessor.put(BasicTasks.UseItem.KEY, basic);
         }).add(Entity.class, (entity, builder, accessor) -> {
             if (NPC_INVENTORY.find(entity, null) != null) {
-                TaskConfig.Factory<Entity, BasicTasks.SwapStack.Result, BasicTasks.SwapStack.Parameters, BrainResourceRepository> basic = DefaultSwapStackTask::new;
-                if (accessor.has(BasicTasks.SwapStack.KEY)) {
-                    final TaskConfig.Factory<Entity, BasicTasks.SwapStack.Result, BasicTasks.SwapStack.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.SwapStack.KEY);
-                    basic = current.fallbackTo(basic);
+                {
+                    TaskConfig.Factory<Entity, BasicTasks.SwapStack.Result, BasicTasks.SwapStack.Parameters, BrainResourceRepository> basic = DefaultSwapStackTask::new;
+                    if (accessor.has(BasicTasks.SwapStack.KEY)) {
+                        final TaskConfig.Factory<Entity, BasicTasks.SwapStack.Result, BasicTasks.SwapStack.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.SwapStack.KEY);
+                        basic = current.fallbackTo(basic);
+                    }
+                    accessor.put(BasicTasks.SwapStack.KEY, basic);
                 }
-                accessor.put(BasicTasks.SwapStack.KEY, basic);
+                {
+                    TaskConfig.Factory<Entity, BasicTasks.SelectToolTask.Result, BasicTasks.SelectToolTask.Parameters, BrainResourceRepository> basic = parameters -> new DefaultSelectToolTask<>(parameters.state(), 3.0);
+                    if (accessor.has(BasicTasks.SelectToolTask.KEY)) {
+                        final TaskConfig.Factory<Entity, BasicTasks.SelectToolTask.Result, BasicTasks.SelectToolTask.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.SelectToolTask.KEY);
+                        basic = current.fallbackTo(basic);
+                    }
+                    accessor.put(BasicTasks.SelectToolTask.KEY, basic);
+                }
+                {
+                    TaskConfig.Factory<Entity, BasicTasks.MoveItemsToContainerTask.Result, BasicTasks.MoveItemsToContainerTask.Parameters, BrainResourceRepository> basic = parameters -> new DefaultMoveItemsToContainerTask<>(parameters.container(), parameters.filter(), parameters.side(), parameters.speed());
+                    if (accessor.has(BasicTasks.MoveItemsToContainerTask.KEY)) {
+                        final TaskConfig.Factory<Entity, BasicTasks.MoveItemsToContainerTask.Result, BasicTasks.MoveItemsToContainerTask.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.MoveItemsToContainerTask.KEY);
+                        basic = current.fallbackTo(basic);
+                    }
+                    accessor.put(BasicTasks.MoveItemsToContainerTask.KEY, basic);
+                }
             }
         }).build();
     }

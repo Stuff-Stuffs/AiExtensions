@@ -7,6 +7,8 @@ import java.util.Optional;
 public interface BrainResourceRepository {
     Optional<BrainResources.Token> get(BrainResource resource);
 
+    void clear();
+
     static Builder builder() {
         return new BrainResourceRepositoryImpl.BuilderImpl();
     }
@@ -17,6 +19,8 @@ public interface BrainResourceRepository {
 
     interface Builder {
         Builder add(BrainResources.Token token);
+
+        Builder addAll(BrainResourceRepository repository);
 
         BrainResourceRepository build(BrainResources resources);
     }

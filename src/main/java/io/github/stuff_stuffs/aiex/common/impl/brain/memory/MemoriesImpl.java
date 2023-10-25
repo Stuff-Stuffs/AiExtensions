@@ -206,7 +206,7 @@ public class MemoriesImpl implements AiBrainView.Memories {
         };
     }
 
-    private <T, K> Runnable forgetUpdate(final MemoryImpl<K> memory, final MemoryReferenceImpl<?> reference) {
+    private <K> Runnable forgetUpdate(final MemoryImpl<K> memory, final MemoryReferenceImpl<?> reference) {
         return () -> {
             if (memory.forgotten()) {
                 return;

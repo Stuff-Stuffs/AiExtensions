@@ -96,6 +96,14 @@ public interface BrainNode<C, R, FC> {
         return fallthroughChain(new IfBrainNode<>(trueBranch, falseBranch, predicate), combiner);
     }
 
+    default <R0> BrainNode<C, R0, FC> chainedCache(final BrainNode<C, R0, R> then) {
+        return chainedCache(then, (fc, r) -> r);
+    }
+
+    default <FC0, R0> BrainNode<C, R0, FC> chainedCache(final BrainNode<C, R0, FC0> then, final BiFunction<FC, R, FC0> combiner) {
+        return new CachingChainedBrainNode<>(this, then, combiner);
+    }
+
     default <R0> BrainNode<C, R0, FC> ifThen(final BiPredicate<BrainContext<C>, R> predicate, final BrainNode<C, R0, R> trueBranch, final BrainNode<C, R0, R> falseBranch) {
         return chain(new IfBrainNode<>(trueBranch, falseBranch, predicate));
     }

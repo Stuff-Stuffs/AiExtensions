@@ -14,6 +14,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiFakePlayer;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
+import io.github.stuff_stuffs.aiex.common.api.util.StringTemplate;
 import io.github.stuff_stuffs.aiex.common.impl.brain.memory.MemoriesImpl;
 import io.github.stuff_stuffs.aiex.common.impl.brain.resource.AbstractBrainResourcesImpl;
 import io.github.stuff_stuffs.aiex.common.impl.brain.resource.BrainResourcesImpl;
@@ -43,7 +44,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
     private final AbstractBrainResourcesImpl resources;
     private long seed;
     private final SpannedLogger logger;
-    private AiFakePlayer fakePlayer;
+    private final AiFakePlayer fakePlayer;
     private long age;
     private boolean init = false;
 
@@ -57,6 +58,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
         memories = new MemoriesImpl();
         this.taskConfig = taskConfig;
         resources = new BrainResourcesImpl();
+        fakePlayer = AiFakePlayer.create(entity, (ServerWorld) entity.getEntityWorld());
     }
 
     public SpannedLogger logger() {
@@ -108,8 +110,11 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             }
 
             @Override
-            public <TR, P, FC> Optional<BrainNode<T, TR, FC>> createTask(final TaskKey<TR, P, FC> key, final P parameters) {
+            public <TR, P, FC> Optional<BrainNode<T, TR, FC>> createTask(final TaskKey<TR, P, FC> key, final P parameters, SpannedLogger logger) {
                 if (!taskConfig.hasFactory(key)) {
+                    try(var l = logger.open("BrainTaskFactory")) {
+                        l.warning("Missing task factory for task " + TaskKey.REGISTRY.getId(key).toUnderscoreSeparatedString() + "!");
+                    }
                     return Optional.empty();
                 }
                 final BrainNode<T, TR, FC> task = taskConfig.getFactory(key).create(parameters);
@@ -159,10 +164,6 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
         try (final SpannedLogger child = logger.open("root")) {
             final BrainContext<T> context = createContext();
             if (!init) {
-                if (entity instanceof AbstractNpcEntity e) {
-                    fakePlayer = AiFakePlayer.create(e, (ServerWorld) e.getEntityWorld());
-                }
-
                 rootNode.init(context, child);
                 init = true;
             }
