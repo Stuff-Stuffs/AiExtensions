@@ -41,6 +41,17 @@ public abstract class AbstractNpcEntityPather<C extends EntityPather.EntityConte
         final C context = createContext(cache, error, maxPathLength, partial, urgency);
         final N start = createCurrent(cache, context);
         final LastPathData data = new LastPathData(target, error, maxPathLength, partial, urgency, immediate);
+        if (target instanceof SingleTarget single) {
+            if (single.target().squaredDistanceTo(entity.getPos()) < error * error) {
+                setPath(null, data);
+                return true;
+            }
+        } else if (target instanceof MetricTarget metricTarget) {
+            if (metricTarget.score(entity.getBlockX(), entity.getBlockY(), entity.getBlockZ(), context) < error) {
+                setPath(null, data);
+                return true;
+            }
+        }
         if (immediate) {
             final AStar.PathInfo<N> path = pathfinder.findPath(start, context, data.target, data.maxError * INV_ERROR_SCALE, data.partial);
             return setPath(path, data);
@@ -57,9 +68,10 @@ public abstract class AbstractNpcEntityPather<C extends EntityPather.EntityConte
         }
     }
 
-    protected boolean setPath(final AStar.PathInfo<N> path, LastPathData oldData) {
+    protected boolean setPath(final AStar.PathInfo<N> path, final LastPathData oldData) {
         if (path == null || path.path() == null) {
             this.oldData = null;
+            entity.getNpcMoveControl().set(List.of());
             return false;
         }
         this.oldData = oldData;
