@@ -36,4 +36,21 @@ public class InventorySlot {
     public Optional<Integer> mainSlot() {
         return internal.right();
     }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof final InventorySlot slot)) {
+            return false;
+        }
+
+        return internal.equals(slot.internal);
+    }
+
+    @Override
+    public int hashCode() {
+        return internal.hashCode();
+    }
 }

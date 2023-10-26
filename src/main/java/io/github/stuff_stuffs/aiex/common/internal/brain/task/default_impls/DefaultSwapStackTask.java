@@ -76,11 +76,11 @@ public class DefaultSwapStackTask<T extends Entity> implements BrainNode<T, Basi
 
     @Override
     public void deinit(final BrainContext<T> context, final SpannedLogger logger) {
-        if (sourceToken == null || !sourceToken.active()) {
+        if (sourceToken != null && !sourceToken.active()) {
             context.brain().resources().release(sourceToken);
             sourceToken = null;
         }
-        if (destinationToken == null || !destinationToken.active()) {
+        if (destinationToken != null && !destinationToken.active()) {
             context.brain().resources().release(destinationToken);
             destinationToken = null;
         }

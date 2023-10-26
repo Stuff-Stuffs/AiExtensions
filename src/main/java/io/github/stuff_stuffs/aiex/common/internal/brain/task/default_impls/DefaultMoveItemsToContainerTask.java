@@ -20,14 +20,17 @@ import net.fabricmc.fabric.api.transfer.v1.storage.SlottedStorage;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleSlotStorage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.ref.WeakReference;
 import java.util.Optional;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -57,26 +60,30 @@ public class DefaultMoveItemsToContainerTask<T extends Entity> implements BrainN
     @Override
     public BasicTasks.MoveItemsToContainerTask.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, final SpannedLogger logger) {
         if (--cooldown > 0) {
-            return new BasicTasks.MoveItemsToContainerTask.Continue(Object2LongMaps.unmodifiable(moved));
+            return new BasicTasks.MoveItemsToContainerTask.Continue(movedView);
         }
         final Vec3d pos = context.entity().getEyePos();
         final double reachDistance = context.brain().config().get(BrainConfig.DEFAULT_REACH_DISTANCE);
         final VoxelShape shape = context.world().getBlockState(target).getOutlineShape(context.world(), target);
-        final Optional<Vec3d> closest = shape.getClosestPointTo(pos);
+        final Optional<Vec3d> closest = shape.getClosestPointTo(pos.subtract(target.getX(), target.getY(), target.getZ()));
         if (closest.isEmpty()) {
+            close(context);
             return new BasicTasks.MoveItemsToContainerTask.Error(BasicTasks.MoveItemsToContainerTask.ErrorType.MISSING_CONTAINER, movedView);
         }
-        if (closest.get().squaredDistanceTo(pos) > reachDistance * reachDistance) {
+        if (closest.get().add(target.getX(), target.getY(), target.getZ()).squaredDistanceTo(pos) > reachDistance * reachDistance) {
+            close(context);
             return new BasicTasks.MoveItemsToContainerTask.Error(BasicTasks.MoveItemsToContainerTask.ErrorType.CANNOT_REACH, movedView);
         }
         final Storage<ItemVariant> storage = ItemStorage.SIDED.find(context.world(), target, side);
         if ((!(storage instanceof SlottedStorage<ItemVariant> slottedStorage))) {
+            close(context);
             return new BasicTasks.MoveItemsToContainerTask.Error(BasicTasks.MoveItemsToContainerTask.ErrorType.MISSING_CONTAINER, movedView);
         }
         final NpcInventory inventory = AiExApi.NPC_INVENTORY.find(context.entity(), null);
         if (inventory == null) {
             throw new IllegalStateException();
         }
+        open(context);
         for (final EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
             final SingleSlotStorage<ItemVariant> slot = inventory.equipment().getSlot(equipmentSlot.getArmorStandSlotId());
             if (move(context, slot, BrainResource.ofEquipmentSlot(equipmentSlot), new InventorySlot(equipmentSlot), slottedStorage)) {
@@ -148,6 +155,40 @@ public class DefaultMoveItemsToContainerTask<T extends Entity> implements BrainN
 
     @Override
     public void deinit(final BrainContext<T> context, final SpannedLogger logger) {
+        close(context);
+    }
 
+    private void open(final BrainContext<?> context) {
+        if (!context.hasPlayerDelegate()) {
+            return;
+        }
+        final Inventory inventory;
+        final BlockEntity entity = context.world().getBlockEntity(target);
+        if (entity == null) {
+            return;
+        }
+        if (entity instanceof Inventory) {
+            inventory = (Inventory) entity;
+        } else {
+            return;
+        }
+        if (context.playerDelegate().openInventory == null || context.playerDelegate().openInventory.get() != inventory) {
+            inventory.onOpen(context.playerDelegate());
+            close(context);
+            context.playerDelegate().openInventory = new WeakReference<>(inventory);
+        }
+    }
+
+    private void close(final BrainContext<?> context) {
+        final WeakReference<Inventory> reference = context.playerDelegate().openInventory;
+        if (reference == null) {
+            return;
+        }
+        final Inventory inventory = reference.get();
+        if (inventory == null) {
+            return;
+        }
+        inventory.onClose(context.playerDelegate());
+        context.playerDelegate().openInventory = null;
     }
 }

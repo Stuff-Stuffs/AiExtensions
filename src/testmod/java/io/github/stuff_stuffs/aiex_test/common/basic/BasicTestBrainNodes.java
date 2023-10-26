@@ -4,7 +4,7 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
-import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.util.avoidance.ProjectileAvoidance;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.entity.Entity;
@@ -26,26 +26,13 @@ import java.util.function.ToDoubleFunction;
 
 public final class BasicTestBrainNodes {
     public static <C extends Entity> BrainNode<C, Optional<Vec3d>, Unit> nearestPlayer() {
-        return new BrainNode<>() {
-            @Override
-            public void init(final BrainContext<C> context, SpannedLogger logger) {
-
+        return BrainNodes.terminal((context, unit) -> {
+            final PlayerEntity player = context.entity().getEntityWorld().getClosestPlayer(context.entity(), 128.0);
+            if (player != null) {
+                return Optional.of(player.getPos());
             }
-
-            @Override
-            public Optional<Vec3d> tick(final BrainContext<C> context, final Unit arg, SpannedLogger logger) {
-                final PlayerEntity player = context.entity().getEntityWorld().getClosestPlayer(context.entity(), 128.0);
-                if (player != null) {
-                    return Optional.of(player.getPos());
-                }
-                return Optional.empty();
-            }
-
-            @Override
-            public void deinit(final BrainContext<C> context, SpannedLogger logger) {
-
-            }
-        };
+            return Optional.empty();
+        });
     }
 
     private static <C extends LivingEntity> Optional<Pair<DodgeKey, ToDoubleFunction<Vec3d>>> create(final List<ProjectileAvoidance.DangerScorer> scorers, final BrainContext<C> context, final Set<UUID> previous) {

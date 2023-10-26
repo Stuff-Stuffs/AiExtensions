@@ -25,8 +25,10 @@ import net.minecraft.entity.Entity;
 import net.minecraft.registry.Registry;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.TypeFilter;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.world.level.storage.LevelStorage;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +63,26 @@ public class AiExCommon implements ModInitializer {
         BrainConfig.Key.init();
         EntityReferenceDataType.REGISTRY.getCodec();
         AfterRegistryFreezeEvent.EVENT.register(EntityReferenceDataTypeCache::clear);
+    }
+
+    public static <B, T extends B> TypeFilter<B, T> createDelegatingTypeFilter(final Class<T> cls) {
+        return new TypeFilter<>() {
+            @Nullable
+            @Override
+            public T downcast(final B obj) {
+                if (obj instanceof AiEntity entity) {
+                    if (entity.aiex$getBrain().hasFakePlayerDelegate() && cls.isInstance(entity.aiex$getBrain().fakePlayerDelegate())) {
+                        return (T) entity.aiex$getBrain().fakePlayerDelegate();
+                    }
+                }
+                return cls.isInstance(obj) ? (T) obj : null;
+            }
+
+            @Override
+            public Class<? extends B> getBaseClass() {
+                return cls;
+            }
+        };
     }
 
     private static void resetDenseTags() {

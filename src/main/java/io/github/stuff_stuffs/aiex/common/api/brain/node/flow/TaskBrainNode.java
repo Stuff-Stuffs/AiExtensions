@@ -42,6 +42,7 @@ public class TaskBrainNode<C, R, P, FC, FC0> implements BrainNode<C, TaskBrainNo
                 final Optional<BrainNode<C, R, FC0>> task = context.createTask(key, parameterFactory.apply(arg, context), child);
                 if (task.isPresent()) {
                     this.task = task.get();
+                    this.task.init(context, child);
                 } else {
                     child.warning("Latching error!");
                     error = true;

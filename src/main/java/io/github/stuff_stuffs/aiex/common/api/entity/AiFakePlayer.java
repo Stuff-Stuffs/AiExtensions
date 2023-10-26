@@ -11,15 +11,18 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.effect.StatusEffectUtil;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.RangedWeaponItem;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.server.world.ServerWorld;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -27,6 +30,7 @@ import java.util.function.Predicate;
 public class AiFakePlayer extends FakePlayer {
     private static final Map<UUID, GameProfile> GAME_PROFILE_CACHE = new MapMaker().weakValues().concurrencyLevel(1).makeMap();
     protected final Entity delegate;
+    public @Nullable WeakReference<Inventory> openInventory;
 
     public static <T extends Entity> AiFakePlayer create(final T entity, final ServerWorld world) {
         return FakePlayerAsm.get(entity, world);

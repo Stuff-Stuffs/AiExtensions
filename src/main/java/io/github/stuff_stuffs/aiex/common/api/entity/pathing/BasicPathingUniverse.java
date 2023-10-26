@@ -150,12 +150,10 @@ public enum BasicPathingUniverse {
             if (Flag.DOOR.set.isIn(oldState.getBlock()) && Flag.DOOR.set.isIn(newState.getBlock())) {
                 return false;
             }
-            if (y == -1) {
+            if ((-1 <= x & x <= 16) && (-1 <= z & z <= 16)) {
                 return true;
             }
-            final boolean xAdj = (x == -1 | x == 16);
-            final boolean zAdj = (z == -1 | z == 16);
-            return xAdj | zAdj;
+            return false;
         }
 
         @Override

@@ -92,10 +92,10 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
                     final boolean wasInAir = !prev.type.floor;
                     final boolean isInAir = !nodeType.floor;
                     double cost = prev.cost + nodeType.costMultiplier;
-                    final double blockHeight = shapeCache.getCollisionShape(x, y, z).getMax(Direction.Axis.Y);
+                    final double blockHeight = Math.max(shapeCache.getCollisionShape(x, y, z).getMax(Direction.Axis.Y), 0);
                     EntityState state = prev.state;
                     if (wasInAir & !isInAir & !nodeType.air) {
-                        final double fallDistance = prev.fallBlocks + (1 - blockHeight);
+                        final double fallDistance = prev.fallBlocks + (1 - blockHeight) - 1;
                         if (fallDistance >= 4) {
                             final double damage = fallDistance - 4.0;
                             if (damage > state.health) {
@@ -237,10 +237,9 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
     protected NodeInfo convert(final List<BasicEntityNode> nodes, final int[] index, final int size) {
         int i = index[0];
         final BasicEntityNode node = nodes.get(i);
-        final BasicEntityNode next = i + 1 == size ? null : nodes.get(i + 1);
         if (node.type == BasicPathingUniverse.LADDER) {
             return new NodeInfo(new NpcMovementNode.ClimbLadder(node.x + 0.5, node.y + 1, node.z + 0.5), i, i + 1);
-        } else if (next != null && next.movementType == EntityMovementType.JUMP) {
+        } else if (node.movementType == EntityMovementType.JUMP) {
             final int start = i;
             while (i < size && !nodes.get(i).type.floor) {
                 i = ++index[0];

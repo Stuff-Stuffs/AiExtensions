@@ -10,6 +10,8 @@ import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.BasicBrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.MineBlockBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.FallthroughChainedBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.IfBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
@@ -31,13 +33,12 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Arm;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -50,35 +51,53 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
     protected TestEntity(final EntityType<? extends MobEntity> entityType, final World world) {
         super(entityType, world);
         navigator = new BasicNpcEntityPather(this);
-        final BrainNode<TestEntity, BasicTasks.Walk.Result, Vec3d> walk = BrainNodes.expectResult(new TaskBrainNode<>(BasicTasks.Walk.KEY, (BiFunction<Vec3d, BrainContext<TestEntity>, BasicTasks.Walk.Parameters>) (vec3d, context) -> new BasicTasks.Walk.Parameters() {
-            @Override
-            public Vec3d target() {
-                return vec3d;
-            }
-
-            @Override
-            public double maxError() {
-                return 1.0;
-            }
-        }, (vec3d, context) -> BrainResourceRepository.buildEmpty(context.brain().resources())), RuntimeException::new).resetOnContext(new BiPredicate<>() {
-            private Vec3d last = new Vec3d(0, -1000000, 0);
-
-            @Override
-            public boolean test(final BrainContext<TestEntity> context, final Vec3d vec3d) {
-                if (vec3d.squaredDistanceTo(last) > 1) {
-                    last = vec3d;
-                    return true;
-                }
-                return false;
-            }
-        }).ifThenFallthrough((context, result) -> result.getFirst() == BasicTasks.Walk.Result.DONE, BasicBrainNodes.<TestEntity>mine().adaptResult((context, result) -> {
-            if (result instanceof MineBlockBrainNode.Broken) {
-                return BasicTasks.Walk.Result.DONE;
-            }
-            return BasicTasks.Walk.Result.CONTINUE;
-        }).adaptArg((context, pair) -> new BasicBrainNodes.MineParameters(BrainResourceRepository.buildEmpty(context.brain().resources()), BlockPos.ofFloored(pair.getSecond()).down())), BrainNodes.constant(BasicTasks.Walk.Result.CONTINUE), Pair::of);
-        final BrainNode<TestEntity, Unit, Unit> root = BasicTestBrainNodes.<TestEntity>nearestPlayer().ifThen((context, d) -> d.isPresent(), walk.discardResult().adaptArg(Optional::get), BrainNodes.empty());
         if (world instanceof ServerWorld) {
+            final var walk = new FallthroughChainedBrainNode<>(BrainNodes.expectResult(new TaskBrainNode<>(BasicTasks.Walk.KEY, (BiFunction<Vec3d, BrainContext<TestEntity>, BasicTasks.Walk.Parameters>) (vec3d, context) -> new BasicTasks.Walk.Parameters() {
+                @Override
+                public Vec3d target() {
+                    return vec3d;
+                }
+
+                @Override
+                public double maxError() {
+                    return 2.0;
+                }
+            }, (vec3d, context) -> BrainResourceRepository.buildEmpty(context.brain().resources())), RuntimeException::new).resetOnContext(new BiPredicate<>() {
+                private Vec3d last = new Vec3d(0, -1000000, 0);
+
+                @Override
+                public boolean test(final BrainContext<TestEntity> context, final Vec3d vec3d) {
+                    if (vec3d.squaredDistanceTo(last) > 1) {
+                        last = vec3d;
+                        return true;
+                    }
+                    return false;
+                }
+            }), new IfBrainNode<>(
+                    new IfBrainNode<>(
+                            BasicBrainNodes.<TestEntity>mine().adaptArg((context, vec) -> new BasicBrainNodes.MineParameters(BrainResourceRepository.buildEmpty(context.brain().resources()), BlockPos.ofFloored(vec).down())),
+                            new TaskBrainNode<>(BasicTasks.MoveItemsToContainerTask.KEY, (BiFunction<Vec3d, BrainContext<TestEntity>, BasicTasks.MoveItemsToContainerTask.Parameters>) (vec3d, context) -> new BasicTasks.MoveItemsToContainerTask.Parameters() {
+                                @Override
+                                public BasicTasks.MoveItemsToContainerTask.Filter filter() {
+                                    return (context1, variant, amount, slot, container) -> new BasicTasks.MoveItemsToContainerTask.Amount(amount, OptionalInt.empty());
+                                }
+
+                                @Override
+                                public BlockPos container() {
+                                    return BlockPos.ofFloored(vec3d).down();
+                                }
+
+                                @Override
+                                public @Nullable Direction side() {
+                                    return null;
+                                }
+                            }, (vec3d, context) -> BrainResourceRepository.buildEmpty(context.brain().resources())).adaptResult((context, result) -> new MineBlockBrainNode.Broken()),
+                            (context, vec3d) -> context.world().getBlockEntity(BlockPos.ofFloored(vec3d).down()) == null
+                    ).adaptArg(Pair::getSecond),
+                    BrainNodes.constant(new MineBlockBrainNode.Error(MineBlockBrainNode.ErrorType.CANT_REACH)),
+                    (context, pair) -> pair.getFirst() == BasicTasks.Walk.Result.DONE
+            ), Pair::of);
+            final BrainNode<TestEntity, Unit, Unit> root = BasicTestBrainNodes.<TestEntity>nearestPlayer().ifThen((context, d) -> d.isPresent(), walk.discardResult().adaptArg(Optional::get), BrainNodes.empty());
             brain = AiBrain.create(this, root, BrainConfig.builder().build(), TaskConfig.<TestEntity>builder().build(this), AiExCommon.createForEntity(this));
             inventory = new DelegatingPlayerInventory(aiex$getBrain().fakePlayerDelegate(), getNpcInventory());
         } else {

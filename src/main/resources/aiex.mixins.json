@@ -6,11 +6,13 @@
     "MixinBlock",
     "MixinDamageSources",
     "MixinEntity",
+    "MixinEntityType",
     "MixinLivingEntity",
     "MixinMobEntity",
     "MixinRegistries",
     "MixinServer",
     "MixinServerWorld",
+    "MixinTypeFilter",
     "MixinWorldSavePath"
   ],
   "injectors": {
