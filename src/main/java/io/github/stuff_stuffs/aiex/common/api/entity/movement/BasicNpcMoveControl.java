@@ -25,11 +25,11 @@ public class BasicNpcMoveControl implements NpcMoveControl {
     }
 
     @Override
-    public void set(List<NpcMovementNode> nodes) {
-        int size = nodes.size();
+    public void set(final List<NpcMovementNode> nodes) {
+        final int size = nodes.size();
         this.nodes = new Wrapper[size];
         for (int i = 0; i < size; i++) {
-            NpcMovementNode node = nodes.get(i);
+            final NpcMovementNode node = nodes.get(i);
             this.nodes[i] = new Wrapper(node, node.ticksTillFailure(entity));
         }
         failed = false;
@@ -104,7 +104,7 @@ public class BasicNpcMoveControl implements NpcMoveControl {
 
         final float angle = (float) (MathHelper.atan2(dz, dx) * 180.0F / (float) Math.PI) - 90.0F;
         entity.setYaw(wrapDegrees(entity.getYaw(), angle, 90.0F));
-        final float speed = (float) Math.min(entity.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED) * 0.35, Math.sqrt(distSq) * 95);
+        final float speed = (float) Math.min(entity.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED) * 0.35, Math.sqrt(distSq) * 0.95);
         entity.setMovementSpeed(speed);
     }
 
