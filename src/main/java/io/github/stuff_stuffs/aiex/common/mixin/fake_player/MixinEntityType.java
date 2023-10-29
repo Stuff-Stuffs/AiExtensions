@@ -1,4 +1,4 @@
-package io.github.stuff_stuffs.aiex.common.mixin;
+package io.github.stuff_stuffs.aiex.common.mixin.fake_player;
 
 import io.github.stuff_stuffs.aiex.common.api.entity.AiEntity;
 import net.minecraft.entity.Entity;

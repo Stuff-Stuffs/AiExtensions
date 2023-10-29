@@ -4,16 +4,22 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "MixinBlock",
-    "MixinDamageSources",
     "MixinEntity",
-    "MixinEntityType",
     "MixinLivingEntity",
     "MixinMobEntity",
     "MixinRegistries",
     "MixinServer",
     "MixinServerWorld",
-    "MixinTypeFilter",
-    "MixinWorldSavePath"
+    "MixinWorldSavePath",
+    "fake_player.EntityTrackingSectionMixin",
+    "fake_player.MixinBarrelBlockEntity$ViewerCountManager",
+    "fake_player.MixinChestBlockEntity$ViewerCountManager",
+    "fake_player.MixinDamageSource",
+    "fake_player.MixinDamageSources",
+    "fake_player.MixinEntityType",
+    "fake_player.MixinPlayerEntity",
+    "fake_player.MixinServerWorld",
+    "fake_player.MixinTypeFilter"
   ],
   "injectors": {
     "defaultRequire": 1

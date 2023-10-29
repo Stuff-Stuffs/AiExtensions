@@ -3,10 +3,13 @@ package io.github.stuff_stuffs.aiex.common.api.entity.pathing;
 import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.AStar;
 import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.CostGetter;
 import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.ShapeCache;
+import io.github.stuff_stuffs.aiex.common.api.debug.PathDebugInfo;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.movement.NpcMovementNode;
 import io.github.stuff_stuffs.aiex.common.api.util.AiExMathUtil;
+import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import org.jetbrains.annotations.Nullable;
@@ -14,21 +17,31 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.EntityContext, BasicNpcEntityPather.BasicEntityNode> {
+public class BasicNpcEntityPather extends AbstractNpcEntityPather<BasicNpcEntityPather.Context, BasicNpcEntityPather.BasicEntityNode> {
+    protected boolean takeFallDamage = false;
+
     public BasicNpcEntityPather(final AbstractNpcEntity entity) {
         super(entity);
     }
 
+    public boolean takeFallDamage() {
+        return takeFallDamage;
+    }
+
+    public void setTakeFallDamage(final boolean takeFallDamage) {
+        this.takeFallDamage = takeFallDamage;
+    }
+
     @Override
-    protected AStar<BasicEntityNode, EntityContext, Target> createPathfinder() {
+    protected AStar<BasicEntityNode, Context, Target> createPathfinder() {
         return new AStar<>(BasicEntityNode.class) {
             @Override
-            protected boolean validEnd(final BasicEntityNode node, final EntityContext context) {
+            protected boolean validEnd(final BasicEntityNode node, final Context context) {
                 return node.type.floor;
             }
 
             @Override
-            protected double heuristic(final BasicEntityNode node, final Target target, final EntityContext context) {
+            protected double heuristic(final BasicEntityNode node, final Target target, final Context context) {
                 if (target instanceof SingleTarget single) {
                     final double yOff = (node.flags & BasicEntityNode.HALF_BLOCK_OR_MORE_FLAG) != 0 ? 0.65 : (node.flags & BasicEntityNode.LESS_THAN_HALF_BLOCK_FLAG) != 0 ? 0.25 : 0;
                     final double dx = Math.abs(node.x - single.target().x);
@@ -47,7 +60,7 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
             }
 
             @Override
-            protected boolean shouldCutoff(final BasicEntityNode node, final EntityContext context) {
+            protected boolean shouldCutoff(final BasicEntityNode node, final Context context) {
                 return node.pathLength > context.maxPathLength();
             }
 
@@ -86,7 +99,7 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
                 return null;
             }
 
-            private BasicEntityNode createAuto(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter) {
+            private BasicEntityNode createAuto(final int x, final int y, final int z, final BasicEntityNode prev, final ShapeCache shapeCache, final CostGetter costGetter, final Context context) {
                 final BasicPathingUniverse nodeType = getLocationType(x, y, z, shapeCache);
                 if (nodeType != BasicPathingUniverse.BLOCKED) {
                     final boolean wasInAir = !prev.type.floor;
@@ -98,10 +111,10 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
                         final double fallDistance = prev.fallBlocks + (1 - blockHeight) - 1;
                         if (fallDistance >= 4) {
                             final double damage = fallDistance - 4.0;
-                            if (damage > state.health) {
+                            if (!context.takeFallDamage || damage > state.health) {
                                 return null;
                             }
-                            cost = cost + AiExMathUtil.adjustableAsymptote(damage, state.health, 16, 4);
+                            cost = cost + AiExMathUtil.fallCost(state.health, context.maxHealth, fallDistance);
                             state = state.withHealth(state.health - damage);
                         }
                     }
@@ -142,7 +155,7 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
             }
 
             @Override
-            protected int neighbours(final BasicEntityNode previous, final EntityContext context, final CostGetter costGetter, final BasicEntityNode[] successors) {
+            protected int neighbours(final BasicEntityNode previous, final Context context, final CostGetter costGetter, final BasicEntityNode[] successors) {
                 int i = 0;
                 final ShapeCache cache = context.cache();
                 BasicEntityNode node;
@@ -180,7 +193,7 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
                     }
                 }
                 if (previous.type.air) {
-                    node = createAuto(previous.x, previous.y - 1, previous.z, previous, cache, costGetter);
+                    node = createAuto(previous.x, previous.y - 1, previous.z, previous, cache, costGetter, context);
                     if (node != null) {
                         successors[i++] = node;
                     }
@@ -191,7 +204,7 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
     }
 
     @Override
-    protected BasicEntityNode createCurrent(final ShapeCache cache, final EntityContext context) {
+    protected BasicEntityNode createCurrent(final ShapeCache cache, final Context context) {
         final int x = entity.getBlockX();
         final int y = entity.getBlockY();
         final int z = entity.getBlockZ();
@@ -200,23 +213,8 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
     }
 
     @Override
-    protected EntityContext createContext(final ShapeCache cache, final double error, final double maxPathLength, final boolean partial, final double urgency) {
-        return new EntityContext() {
-            @Override
-            public LivingEntity entity() {
-                return entity;
-            }
-
-            @Override
-            public double maxPathLength() {
-                return maxPathLength;
-            }
-
-            @Override
-            public ShapeCache cache() {
-                return cache;
-            }
-        };
+    protected Context createContext(final ShapeCache cache, final double error, final double maxPathLength, final boolean partial, final double urgency) {
+        return new Context(entity, maxPathLength, cache, entity.getMaxHealth(), takeFallDamage);
     }
 
     @Override
@@ -232,6 +230,15 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
             movementNodes.add(movementNode);
         }
         return movementNodes;
+    }
+
+    @Override
+    protected PathDebugInfo debugInfo(final AStar.PathInfo<BasicEntityNode> path) {
+        final List<BlockPos> positions = new ArrayList<>(path.path().size());
+        for (final BasicEntityNode node : path.path()) {
+            positions.add(new BlockPos(node.x, node.y, node.z));
+        }
+        return new PathDebugInfo(new Identifier[]{AiExCommon.id("basic")}, positions.toArray(new BlockPos[0]), new int[positions.size()], entity);
     }
 
     protected NodeInfo convert(final List<BasicEntityNode> nodes, final int[] index, final int size) {
@@ -341,6 +348,37 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<EntityPather.E
                     "type=" + type + ", " +
                     "flags=" + flags + ", " +
                     "movementType=" + movementType + ']';
+        }
+    }
+
+    public static class Context implements EntityContext {
+        public final LivingEntity entity;
+        public final double maxPathLength;
+        public final ShapeCache cache;
+        public final double maxHealth;
+        public final boolean takeFallDamage;
+
+        public Context(final LivingEntity entity, final double maxPathLength, final ShapeCache cache, final double maxHealth, final boolean takeFallDamage) {
+            this.entity = entity;
+            this.maxPathLength = maxPathLength;
+            this.cache = cache;
+            this.maxHealth = maxHealth;
+            this.takeFallDamage = takeFallDamage;
+        }
+
+        @Override
+        public LivingEntity entity() {
+            return entity;
+        }
+
+        @Override
+        public double maxPathLength() {
+            return maxPathLength;
+        }
+
+        @Override
+        public ShapeCache cache() {
+            return cache;
         }
     }
 

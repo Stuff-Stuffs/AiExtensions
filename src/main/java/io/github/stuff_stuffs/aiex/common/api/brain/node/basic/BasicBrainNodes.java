@@ -4,7 +4,6 @@ import com.mojang.datafixers.util.Pair;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.FallthroughChainedBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.IfBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
@@ -47,7 +46,7 @@ public final class BasicBrainNodes {
                 }
             };
         }), Pair::of).cache().resetOnContext(AiExFunctionUtil.eagerOr(AiExFunctionUtil.watcher((context, parameters) -> parameters.pos.toImmutable(), false), AiExFunctionUtil.watcher((context, parameters) -> context.world().getBlockState(parameters.pos), false)));
-        return new FallthroughChainedBrainNode<>(node, new IfBrainNode<>(new MineBlockBrainNode<T>().adaptArg(Optional::get), BrainNodes.constant(new MineBlockBrainNode.Error(MineBlockBrainNode.ErrorType.RESOURCE_ACQUISITION)), (context, opt) -> opt.isPresent()), (BiFunction<EquipFirstBrainNode.Result, MineParameters, Optional<MineParameters>>) (result, parameters) -> {
+        return node.fallthroughChain(new IfBrainNode<>(new MineBlockBrainNode<T>().adaptArg(Optional::get), BrainNodes.constant(new MineBlockBrainNode.Error(MineBlockBrainNode.ErrorType.RESOURCE_ACQUISITION)), (context, opt) -> opt.isPresent()), (BiFunction<EquipFirstBrainNode.Result, MineParameters, Optional<MineParameters>>) (result, parameters) -> {
             if (result instanceof EquipFirstBrainNode.Error) {
                 return Optional.empty();
             }

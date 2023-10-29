@@ -3,6 +3,7 @@ package io.github.stuff_stuffs.aiex.common.api.brain.resource;
 import io.github.stuff_stuffs.aiex.common.impl.brain.resource.BrainResourceRepositoryImpl;
 
 import java.util.Optional;
+import java.util.Set;
 
 public interface BrainResourceRepository {
     Optional<BrainResources.Token> get(BrainResource resource);
@@ -21,6 +22,12 @@ public interface BrainResourceRepository {
         Builder add(BrainResources.Token token);
 
         Builder addAll(BrainResourceRepository repository);
+
+        default Builder addAllExcept(final BrainResourceRepository repository, final BrainResource... except) {
+            return addAllExcept(repository, Set.of(except));
+        }
+
+        Builder addAllExcept(BrainResourceRepository repository, Set<BrainResource> except);
 
         BrainResourceRepository build(BrainResources resources);
     }

@@ -101,7 +101,7 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
             brain = AiBrain.create(this, root, BrainConfig.builder().build(), TaskConfig.<TestEntity>builder().build(this), AiExCommon.createForEntity(this));
             inventory = new DelegatingPlayerInventory(aiex$getBrain().fakePlayerDelegate(), getNpcInventory());
         } else {
-            brain = null;
+            brain = AiBrain.createClient();
             inventory = null;
         }
         updateSlim();
@@ -162,7 +162,7 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
 
     @Override
     public int ensuredPathingRadius() {
-        return 3;
+        return 2;
     }
 
     @Override

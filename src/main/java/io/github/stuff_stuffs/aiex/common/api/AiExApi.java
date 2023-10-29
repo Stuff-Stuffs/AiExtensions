@@ -26,7 +26,6 @@ public final class AiExApi {
     public static final EntityApiLookup<NpcInventory, Void> NPC_INVENTORY = EntityApiLookup.get(AiExCommon.id("npc_inventory"), NpcInventory.class, Void.class);
 
     public static final TagKey<EntityType<?>> PROJECTILE_ENTITY_TAG = TagKey.of(RegistryKeys.ENTITY_TYPE, AiExCommon.id("projectile"));
-    public static final TagKey<Block> MINEABLE_STONE_TAG = TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_stone_mineable"));
     public static final TagKey<Block> MINEABLE_ORE_TAG = TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_ore_mineable"));
 
     public static void submitTask(final Runnable runnable, final ServerWorld world) {

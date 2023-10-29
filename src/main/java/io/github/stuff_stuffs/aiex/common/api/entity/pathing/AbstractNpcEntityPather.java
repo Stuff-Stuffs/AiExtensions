@@ -3,6 +3,8 @@ package io.github.stuff_stuffs.aiex.common.api.entity.pathing;
 import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.AStar;
 import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.ShapeCache;
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
+import io.github.stuff_stuffs.aiex.common.api.debug.AiExDebugFlags;
+import io.github.stuff_stuffs.aiex.common.api.debug.PathDebugInfo;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.movement.NpcMovementNode;
 import net.minecraft.server.world.ServerWorld;
@@ -76,8 +78,11 @@ public abstract class AbstractNpcEntityPather<C extends EntityPather.EntityConte
         }
         this.oldData = oldData;
         entity.getNpcMoveControl().set(convert(path.path()));
+        AiExDebugFlags.send(AiExDebugFlags.PATH_FLAG, debugInfo(path), (ServerWorld) entity.getEntityWorld());
         return true;
     }
+
+    protected abstract PathDebugInfo debugInfo(AStar.PathInfo<N> path);
 
     @Override
     public boolean idle() {

@@ -9,14 +9,13 @@ import org.apache.commons.lang3.mutable.MutableObject;
 
 import java.lang.ref.WeakReference;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class CombinedDenseBlockTagSet extends CombinedDenseTagSet<Block> {
-    private static final Map<Set<TagKey<Block>>, WeakReference<CombinedDenseBlockTagSet>> CACHE = new ConcurrentHashMap<>();
+final class DenseBlockRefTagSet extends AbstractDenseRefTagSet<Block> {
+    private static final Map<TagKey<Block>, WeakReference<DenseBlockRefTagSet>> CACHE = new ConcurrentHashMap<>();
 
-    private CombinedDenseBlockTagSet(final Set<TagKey<Block>> set) {
-        super(set);
+    private DenseBlockRefTagSet(final TagKey<Block> key) {
+        super(key);
     }
 
     @Override
@@ -29,19 +28,18 @@ public final class CombinedDenseBlockTagSet extends CombinedDenseTagSet<Block> {
         return ((InternalBlockExtensions) val).aiex$uniqueId();
     }
 
-    public static CombinedDenseBlockTagSet get(Set<TagKey<Block>> key) {
-        key = Set.copyOf(key);
-        final MutableObject<CombinedDenseBlockTagSet> result = new MutableObject<>();
+    public static DenseBlockRefTagSet get(final TagKey<Block> key) {
+        final MutableObject<DenseBlockRefTagSet> result = new MutableObject<>();
         CACHE.compute(key, (k, reference) -> {
             if (reference == null) {
-                final CombinedDenseBlockTagSet set = new CombinedDenseBlockTagSet(k);
+                final DenseBlockRefTagSet set = new DenseBlockRefTagSet(k);
                 set.reset();
                 result.setValue(set);
                 return new WeakReference<>(set);
             }
-            final CombinedDenseBlockTagSet old = reference.get();
+            final DenseBlockRefTagSet old = reference.get();
             if (old == null) {
-                final CombinedDenseBlockTagSet set = new CombinedDenseBlockTagSet(k);
+                final DenseBlockRefTagSet set = new DenseBlockRefTagSet(k);
                 set.reset();
                 result.setValue(set);
                 return new WeakReference<>(set);
@@ -53,8 +51,8 @@ public final class CombinedDenseBlockTagSet extends CombinedDenseTagSet<Block> {
     }
 
     public static void resetAll() {
-        for (final WeakReference<CombinedDenseBlockTagSet> value : CACHE.values()) {
-            final CombinedDenseBlockTagSet set = value.get();
+        for (final WeakReference<DenseBlockRefTagSet> value : CACHE.values()) {
+            final DenseBlockRefTagSet set = value.get();
             if (set != null) {
                 set.reset();
             }

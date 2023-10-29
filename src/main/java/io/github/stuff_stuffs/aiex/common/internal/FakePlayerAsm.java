@@ -1,6 +1,7 @@
 package io.github.stuff_stuffs.aiex.common.internal;
 
 import io.github.stuff_stuffs.aiex.common.api.entity.AiFakePlayer;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.world.ServerWorld;
 import org.objectweb.asm.*;
@@ -11,6 +12,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
@@ -60,9 +62,9 @@ public final class FakePlayerAsm {
         classVisitor.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, thisName, null, baseName, null);
         final String clazzDescriptor = Type.getDescriptor(clazz);
         classVisitor.visitField(Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL, "delegate", clazzDescriptor, null, null);
-        for (final Method method : clazz.getMethods()) {
-            boolean delegateGenerated = false;
-            if ((method.getModifiers() & Modifier.FINAL) == 0 && !method.isAnnotationPresent(AiFakePlayer.NoGenerateDelegate.class)) {
+        final Set<String> delegatesGenerated = new ObjectOpenHashSet<>();
+        for (final Method method : AiFakePlayer.class.getMethods()) {
+            if ((method.getModifiers() & (Modifier.FINAL | Modifier.STATIC)) == 0 && !method.isAnnotationPresent(AiFakePlayer.NoGenerateDelegate.class)) {
                 final Method delegateMethod;
                 try {
                     delegateMethod = clazz.getMethod(method.getName(), method.getParameterTypes());
@@ -70,7 +72,12 @@ public final class FakePlayerAsm {
                     continue;
                 }
                 final Parameter[] parameters = method.getParameters();
+                if (!method.getReturnType().isAssignableFrom(delegateMethod.getReturnType())) {
+                    continue;
+                }
                 final MethodVisitor methodVisitor = classVisitor.visitMethod(Opcodes.ACC_PUBLIC, method.getName(), Type.getMethodDescriptor(method), null, null);
+                final String delegateDescriptor = Type.getMethodDescriptor(delegateMethod);
+                delegatesGenerated.add(delegateMethod.getName() + delegateDescriptor);
                 for (final Parameter type : parameters) {
                     methodVisitor.visitParameter(type.getName(), Opcodes.ACC_FINAL);
                 }
@@ -86,7 +93,7 @@ public final class FakePlayerAsm {
                     methodVisitor.visitVarInsn(type.getOpcode(Opcodes.ILOAD), idx);
                     idx = idx + type.getSize();
                 }
-                methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(clazz), delegateMethod.getName(), Type.getMethodDescriptor(delegateMethod), false);
+                methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(clazz), delegateMethod.getName(), delegateDescriptor, false);
                 methodVisitor.visitInsn(Type.getType(delegateMethod.getReturnType()).getOpcode(Opcodes.IRETURN));
                 methodVisitor.visitLabel(label);
                 methodVisitor.visitInsn(Opcodes.POP);
@@ -101,10 +108,11 @@ public final class FakePlayerAsm {
                 methodVisitor.visitInsn(Type.getType(method.getReturnType()).getOpcode(Opcodes.IRETURN));
                 methodVisitor.visitMaxs(idx + 1, idx + 1);
                 methodVisitor.visitEnd();
-                delegateGenerated = true;
             }
-            if (!delegateGenerated && method.isAnnotationPresent(AiFakePlayer.EnsureDelegateGeneration.class)) {
-                throw new RuntimeException("Did not generate required delegate!");
+        }
+        for (final Method method : clazz.getMethods()) {
+            if (method.isAnnotationPresent(AiFakePlayer.EnsureDelegateGeneration.class) && !delegatesGenerated.contains(method.getName() + Type.getMethodDescriptor(method))) {
+                throw new RuntimeException();
             }
         }
         final MethodVisitor methodVisitor = classVisitor.visitMethod(Opcodes.ACC_PUBLIC, "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(ServerWorld.class), Type.getType(clazz)), null, null);

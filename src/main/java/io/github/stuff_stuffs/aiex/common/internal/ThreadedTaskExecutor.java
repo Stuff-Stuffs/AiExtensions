@@ -15,6 +15,9 @@ public class ThreadedTaskExecutor {
 
     public void tick() {
         final int min = Math.min(queue.size(), pool.getPoolSize());
+        if (min == 0) {
+            return;
+        }
         final CyclicBarrier barrier = new CyclicBarrier(min + 1);
         for (int i = 0; i < min; i++) {
             queue.add(() -> {

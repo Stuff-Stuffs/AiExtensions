@@ -7,10 +7,10 @@ extendable  method  net/minecraft/entity/Entity getBlockX ()I
 extendable  method  net/minecraft/entity/Entity getBlockY ()I
 extendable  method  net/minecraft/entity/Entity getBlockZ ()I
 extendable  method  net/minecraft/entity/Entity getBoundingBox ()Lnet/minecraft/util/math/Box;
-extendable  method  net/minecraft/entity/Entity teleport (DDD)
+extendable  method  net/minecraft/entity/Entity teleport (DDD)V
 extendable  method  net/minecraft/entity/Entity setGlowing (Z)V
 extendable  method  net/minecraft/entity/Entity getEyePos ()Lnet/minecraft/util/math/Vec3d;
 extendable  method  net/minecraft/entity/Entity getRotationVec (F)Lnet/minecraft/util/math/Vec3d;
 extendable  method  net/minecraft/entity/Entity getOppositeRotationVector (F)Lnet/minecraft/util/math/Vec3d;
 extendable  method  net/minecraft/entity/Entity detach ()V
-extendable  method  net/minecraft/entity/Entity getLootTable ()Lnet/minecraft/util/Identifier;
+extendable  method  net/minecraft/entity/LivingEntity getLootTable ()Lnet/minecraft/util/Identifier;

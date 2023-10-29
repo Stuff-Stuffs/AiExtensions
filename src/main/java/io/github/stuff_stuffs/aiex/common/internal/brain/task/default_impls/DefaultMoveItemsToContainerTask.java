@@ -108,44 +108,42 @@ public class DefaultMoveItemsToContainerTask<T extends Entity> implements BrainN
             if (token == null) {
                 return false;
             }
-            try {
-                try (final Transaction transaction = Transaction.openOuter()) {
-                    final long maxInsert;
-                    final Storage<ItemVariant> target;
-                    if (filtered.target().isPresent()) {
-                        final int index = filtered.target().getAsInt();
-                        if (index < 0 || index >= out.getSlotCount()) {
-                            return false;
-                        }
-                        target = out.getSlot(index);
-                    } else {
-                        target = out;
-                    }
-                    try (final Transaction inner = transaction.openNested()) {
-                        maxInsert = target.insert(resource, filtered.amount(), inner);
-                        inner.abort();
-                    }
-                    final long toInsert = Math.min(maxInsert, filtered.amount());
-                    if (toInsert <= 0) {
-                        transaction.abort();
+            try (final Transaction transaction = Transaction.openOuter()) {
+                final long maxInsert;
+                final Storage<ItemVariant> target;
+                if (filtered.target().isPresent()) {
+                    final int index = filtered.target().getAsInt();
+                    if (index < 0 || index >= out.getSlotCount()) {
                         return false;
                     }
-                    final long extracted = slot.extract(resource, toInsert, transaction);
-                    if (extracted != toInsert) {
-                        transaction.abort();
-                        return false;
-                    }
-                    final long inserted = target.insert(resource, extracted, transaction);
-                    if (inserted != extracted) {
-                        transaction.abort();
-                        return false;
-                    }
-                    transaction.commit();
-                    final long prev = moved.getLong(resource);
-                    moved.put(resource, prev + inserted);
-                    cooldown = frequency;
-                    return true;
+                    target = out.getSlot(index);
+                } else {
+                    target = out;
                 }
+                try (final Transaction inner = transaction.openNested()) {
+                    maxInsert = target.insert(resource, filtered.amount(), inner);
+                    inner.abort();
+                }
+                final long toInsert = Math.min(maxInsert, filtered.amount());
+                if (toInsert <= 0) {
+                    transaction.abort();
+                    return false;
+                }
+                final long extracted = slot.extract(resource, toInsert, transaction);
+                if (extracted != toInsert) {
+                    transaction.abort();
+                    return false;
+                }
+                final long inserted = target.insert(resource, extracted, transaction);
+                if (inserted != extracted) {
+                    transaction.abort();
+                    return false;
+                }
+                transaction.commit();
+                final long prev = moved.getLong(resource);
+                moved.put(resource, prev + inserted);
+                cooldown = frequency;
+                return true;
             } finally {
                 context.brain().resources().release(token);
             }
@@ -180,6 +178,9 @@ public class DefaultMoveItemsToContainerTask<T extends Entity> implements BrainN
     }
 
     private void close(final BrainContext<?> context) {
+        if (!context.hasPlayerDelegate()) {
+            return;
+        }
         final WeakReference<Inventory> reference = context.playerDelegate().openInventory;
         if (reference == null) {
             return;

@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public class BrainResourceRepositoryImpl implements BrainResourceRepository {
     private final BrainResources resources;
@@ -54,6 +55,20 @@ public class BrainResourceRepositoryImpl implements BrainResourceRepository {
         @Override
         public Builder addAll(final BrainResourceRepository repository) {
             for (final Map.Entry<BrainResource, BrainResources.Token> entry : ((BrainResourceRepositoryImpl) repository).tokens.entrySet()) {
+                final Optional<BrainResources.Token> child = ((AbstractBrainResourcesImpl) (((BrainResourceRepositoryImpl) repository).resources)).createChild(entry.getValue());
+                if (child.isPresent()) {
+                    tokens.putIfAbsent(entry.getKey(), child.get());
+                }
+            }
+            return this;
+        }
+
+        @Override
+        public Builder addAllExcept(BrainResourceRepository repository, Set<BrainResource> except) {
+            for (final Map.Entry<BrainResource, BrainResources.Token> entry : ((BrainResourceRepositoryImpl) repository).tokens.entrySet()) {
+                if(except.contains(entry.getKey())) {
+                    continue;
+                }
                 final Optional<BrainResources.Token> child = ((AbstractBrainResourcesImpl) (((BrainResourceRepositoryImpl) repository).resources)).createChild(entry.getValue());
                 if (child.isPresent()) {
                     tokens.putIfAbsent(entry.getKey(), child.get());

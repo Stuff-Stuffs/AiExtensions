@@ -4,18 +4,22 @@ import io.github.stuff_stuffs.advanced_ai_pathing.common.api.pathing.location_ca
 import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.ShapeCache;
 import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.UniverseInfo;
 import io.github.stuff_stuffs.aiex.common.api.util.CollisionHelper;
-import io.github.stuff_stuffs.aiex.common.api.util.tag.CombinedDenseBlockTagSet;
-import io.github.stuff_stuffs.aiex.common.api.util.tag.DenseBlockTagSet;
+import io.github.stuff_stuffs.aiex.common.api.util.tag.DenseRefSet;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.TagKey;
+import net.minecraft.util.function.BooleanBiFunction;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.util.shape.VoxelShapes;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public enum BasicPathingUniverse {
     BLOCKED(false, false, 1.0),
@@ -28,22 +32,22 @@ public enum BasicPathingUniverse {
     PATH(true, false, 0.2),
     OPENABLE_DOOR(true, false, 2.0),
     LADDER(true, true, 3.0);
-    public static final CombinedDenseBlockTagSet FLOOR_TAGS;
-    public static final CombinedDenseBlockTagSet BOX_TAGS;
+    public static final DenseRefSet<Block> FLOOR_TAGS;
+    public static final DenseRefSet<Block> BOX_TAGS;
 
     static {
-        final Set<TagKey<Block>> floorKeys = new ObjectOpenHashSet<>();
-        final Set<TagKey<Block>> boxKeys = new ObjectOpenHashSet<>();
+        final List<DenseRefSet<Block>> floorSets = new ArrayList<>();
+        final List<DenseRefSet<Block>> boxSets = new ArrayList<>();
         for (final Flag flag : Flag.values()) {
             if (flag.floor) {
-                floorKeys.add(flag.key);
+                floorSets.add(flag.set);
             }
             if (flag.box) {
-                boxKeys.add(flag.key);
+                boxSets.add(flag.set);
             }
         }
-        FLOOR_TAGS = CombinedDenseBlockTagSet.get(floorKeys);
-        BOX_TAGS = CombinedDenseBlockTagSet.get(boxKeys);
+        FLOOR_TAGS = DenseRefSet.any(floorSets);
+        BOX_TAGS = DenseRefSet.any(boxSets);
     }
 
     public static final UniverseInfo<BasicPathingUniverse> UNIVERSE_INFO = UniverseInfo.fromEnum(BasicPathingUniverse.class);
@@ -88,7 +92,7 @@ public enum BasicPathingUniverse {
         protected Long updateFloorState(final Long old, final int bx, final int by, final int bz, final double x, final double y, final double z, final VoxelShape thisShape, final VoxelShape shape, final BlockState state, final ShapeCache world) {
             long l = old;
             final Block block = state.getBlock();
-            if (FLOOR_TAGS.isInAny(block)) {
+            if (FLOOR_TAGS.isIn(block)) {
                 if (Flag.DANGER.set.isIn(block)) {
                     l |= Flag.DANGER.mask;
                 }
@@ -111,7 +115,7 @@ public enum BasicPathingUniverse {
         protected Long updateState(final Long old, final int bx, final int by, final int bz, final double x, final double y, final double z, final VoxelShape thisShape, final VoxelShape shape, final BlockState state, final ShapeCache world) {
             long l = old;
             final Block block = state.getBlock();
-            if (BOX_TAGS.isInAny(block)) {
+            if (BOX_TAGS.isIn(block)) {
                 if (Flag.DOOR.set.isIn(block)) {
                     l |= Flag.DOOR.mask;
                     return l;
@@ -143,14 +147,22 @@ public enum BasicPathingUniverse {
         }
 
         @Override
-        public boolean needsRebuild(final int chunkSectionX, final int chunkSectionY, final int chunkSectionZ, final int otherChunkSectionX, final int otherChunkSectionY, final int otherChunkSectionZ, final int x, final int y, final int z, final ShapeCache cache, final BlockState oldState, final BlockState newState) {
+        public boolean needsRebuild(final int chunkSectionX, final int chunkSectionY, final int chunkSectionZ, final int otherChunkSectionX, final int otherChunkSectionY, final int otherChunkSectionZ, final int x, final int y, final int z, final ShapeCache cache, final BlockState oldState, final BlockState newState, final BlockPos.Mutable scratch) {
             if (y > 16 | y < -1) {
                 return false;
             }
-            if (Flag.DOOR.set.isIn(oldState.getBlock()) && Flag.DOOR.set.isIn(newState.getBlock())) {
+            final Block oldBlock = oldState.getBlock();
+            final Block newBlock = newState.getBlock();
+            if (Flag.DOOR.set.isIn(oldBlock) && Flag.DOOR.set.isIn(newBlock)) {
                 return false;
             }
             if ((-1 <= x & x <= 16) && (-1 <= z & z <= 16)) {
+                if (oldBlock == newBlock) {
+                    final BlockPos.Mutable set = scratch.set(x + chunkSectionX * 16, y + chunkSectionY * 16, z + chunkSectionZ * 16);
+                    final VoxelShape oldShape = oldState.getCollisionShape(cache, set);
+                    final VoxelShape newShape = newState.getCollisionShape(cache, set);
+                    return oldShape != newShape && VoxelShapes.matchesAnywhere(oldShape, newShape, BooleanBiFunction.NOT_SAME);
+                }
                 return true;
             }
             return false;
@@ -178,16 +190,21 @@ public enum BasicPathingUniverse {
         DANGER(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_danger")), true, true),
         PATH(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_path")), true, false),
         DOOR(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_door")), false, true),
-        LADDER(TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_ladder")), false, true);
-        public final TagKey<Block> key;
-        public final DenseBlockTagSet set;
+        LADDER(DenseRefSet.predicatedBlock(DenseRefSet.ofBlockTag(BlockTags.CLIMBABLE), block -> block != Blocks.VINE && block != Blocks.SCAFFOLDING), false, true);
+        public final DenseRefSet<Block> set;
         public final boolean floor;
         public final boolean box;
         public final long mask;
 
         Flag(final TagKey<Block> key, final boolean floor, final boolean box) {
-            this.key = key;
-            set = DenseBlockTagSet.get(key);
+            set = DenseRefSet.ofBlockTag(key);
+            this.floor = floor;
+            this.box = box;
+            mask = 1L << ordinal();
+        }
+
+        Flag(final DenseRefSet<Block> set, final boolean floor, final boolean box) {
+            this.set = set;
             this.floor = floor;
             this.box = box;
             mask = 1L << ordinal();

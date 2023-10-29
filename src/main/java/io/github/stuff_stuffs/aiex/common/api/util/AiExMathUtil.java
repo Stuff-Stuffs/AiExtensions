@@ -3,10 +3,14 @@ package io.github.stuff_stuffs.aiex.common.api.util;
 import net.minecraft.util.math.Box;
 
 public final class AiExMathUtil {
-    //https://www.desmos.com/calculator/bbgs3z1ruf
-    public static double adjustableAsymptote(final double x, final double asymptote, final double intercept, final double scale) {
-        final double delta = asymptote - x;
-        return intercept - scale / (asymptote * asymptote) + scale / (delta * delta);
+    public static double fallCost(final double health, final double maxHealth, final double damage) {
+        if (damage >= health - 0.1) {
+            return Double.POSITIVE_INFINITY;
+        }
+        final double scale = 4000;
+        final double scoreCurrent = 1 / health - 1 / maxHealth;
+        final double scoreNext = 1 / (health - damage) - 1 / maxHealth;
+        return scale * (scoreNext - scoreCurrent);
     }
 
     public static double boxDistanceSq(final double x, final double y, final double z, final Box box) {
