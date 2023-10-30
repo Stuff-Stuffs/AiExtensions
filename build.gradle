@@ -68,7 +68,8 @@ dependencies {
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-    modImplementation "io.github.stuff_stuffs.advanced_ai_pathing:advanced_ai_pathing:1.6.11"
+    modImplementation "io.github.stuff_stuffs.advanced_ai_pathing:advanced_ai_pathing:1.7.7"
+    include "io.github.stuff_stuffs.advanced_ai_pathing:advanced_ai_pathing:1.7.7"
     testmodImplementation(sourceSets.main.output)
     testmodClientImplementation(sourceSets.testmod.output)
 }

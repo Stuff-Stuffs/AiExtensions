@@ -139,14 +139,23 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
             if (pather != null) {
                 pather.tick();
             }
-            if (this instanceof PathingNpcEntity pathing && age % pathing.pathingCachePollRate() == 0) {
-                final ChunkPos pos = getChunkPos();
-                final int rad = pathing.ensuredPathingRadius();
-                final int minY = Math.max(world.getBottomSectionCoord(), ChunkSectionPos.getSectionCoord(getBlockY()) - rad);
-                final int maxY = Math.min(world.getTopSectionCoord() - 1, ChunkSectionPos.getSectionCoord(getBlockY()) + rad);
-                final ChunkSectionPos min = ChunkSectionPos.from(pos.x - rad, minY, pos.z - rad);
-                final ChunkSectionPos max = ChunkSectionPos.from(pos.x + rad, maxY, pos.z + rad);
-                AiExApi.submitTask(new EnsurePathingValidTask(world, min, max, pathing.ensuredLocationClassifiers()), world);
+            if (this instanceof PathingNpcEntity pathing) {
+                final boolean priority = age % pathing.priorityPathingPollRate() == 0;
+                final boolean normal = age % pathing.pathingPollRate() == 0;
+                if (priority | normal) {
+                    final ChunkPos pos = getChunkPos();
+                    final int rad;
+                    if (normal) {
+                        rad = pathing.ensuredPathingRadius();
+                    } else {
+                        rad = pathing.priorityEnsuredPathingRadius();
+                    }
+                    final int minY = Math.max(world.getBottomSectionCoord(), ChunkSectionPos.getSectionCoord(getBlockY()) - rad);
+                    final int maxY = Math.min(world.getTopSectionCoord() - 1, ChunkSectionPos.getSectionCoord(getBlockY()) + rad);
+                    final ChunkSectionPos min = ChunkSectionPos.from(pos.x - rad, minY, pos.z - rad);
+                    final ChunkSectionPos max = ChunkSectionPos.from(pos.x + rad, maxY, pos.z + rad);
+                    AiExApi.submitTask(new EnsurePathingValidTask(world, min, max, pathing.ensuredLocationClassifiers()), world);
+                }
             }
 
             if (aiex$getBrain().hasFakePlayerDelegate() && getHealth() > 0.0F && !isSpectator()) {

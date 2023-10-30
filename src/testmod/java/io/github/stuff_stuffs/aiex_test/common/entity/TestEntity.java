@@ -161,16 +161,6 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
     }
 
     @Override
-    public int ensuredPathingRadius() {
-        return 2;
-    }
-
-    @Override
-    public int pathingCachePollRate() {
-        return 40;
-    }
-
-    @Override
     public Collection<LocationClassifier<?>> ensuredLocationClassifiers() {
         return Collections.singleton(BasicPathingUniverse.CLASSIFIER);
     }

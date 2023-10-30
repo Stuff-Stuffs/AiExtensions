@@ -5,9 +5,21 @@ import io.github.stuff_stuffs.advanced_ai_pathing.common.api.pathing.location_ca
 import java.util.Collection;
 
 public interface PathingNpcEntity {
-    int ensuredPathingRadius();
+    default int priorityEnsuredPathingRadius() {
+        return 1;
+    }
 
-    int pathingCachePollRate();
+    default int priorityPathingPollRate() {
+        return 15;
+    }
+
+    default int ensuredPathingRadius() {
+        return 3;
+    }
+
+    default int pathingPollRate() {
+        return 40;
+    }
 
     Collection<LocationClassifier<?>> ensuredLocationClassifiers();
 }

@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.mixin;
 
+import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.internal.EntityReferenceContainer;
 import io.github.stuff_stuffs.aiex.common.internal.InternalServerExtensions;
 import io.github.stuff_stuffs.aiex.common.internal.ThreadedTaskExecutor;
@@ -53,7 +54,7 @@ public class MixinServer implements InternalServerExtensions {
     }
 
     @Override
-    public void aiex$submitTask(final Runnable task) {
+    public void aiex$submitTask(final AiExApi.Job task) {
         aiex$executor.submit(task);
     }
 }

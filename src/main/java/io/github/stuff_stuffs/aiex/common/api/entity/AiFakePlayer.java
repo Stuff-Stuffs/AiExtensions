@@ -42,6 +42,7 @@ public class AiFakePlayer extends FakePlayer implements EntityReferencable {
         return super.getType();
     }
 
+    @NoGenerateDelegate
     public Entity getDelegate() {
         return delegate;
     }

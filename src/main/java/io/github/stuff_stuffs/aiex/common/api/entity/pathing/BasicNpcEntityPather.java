@@ -383,15 +383,6 @@ public class BasicNpcEntityPather extends AbstractNpcEntityPather<BasicNpcEntity
     }
 
     public static long getFlags(final int x, final int y, final int z, final ShapeCache cache) {
-        final double max = cache.getCollisionShape(x, y, z).getMax(Direction.Axis.Y);
-        long flags = 0;
-        if (max > 0) {
-            if (max >= 0.5) {
-                flags |= BasicEntityNode.HALF_BLOCK_OR_MORE_FLAG;
-            } else {
-                flags |= BasicEntityNode.LESS_THAN_HALF_BLOCK_FLAG;
-            }
-        }
-        return flags;
+        return 0;
     }
 }

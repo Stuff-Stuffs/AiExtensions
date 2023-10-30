@@ -36,6 +36,7 @@ public class AiExClient implements ClientModInitializer {
         });
         AiExCommands.CLIENT_PATH_DEBUG_APPLICATOR = info -> {
             final MinecraftClient client = MinecraftClient.getInstance();
+            //TODO actually code invalidation
             TIME_OUTS.clear();
             TIME_OUTS.put(info, client.world.getTime() + AiBrainEvent.MINUTE * 3);
         };

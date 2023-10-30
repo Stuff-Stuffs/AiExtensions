@@ -28,7 +28,7 @@ public final class AiExApi {
     public static final TagKey<EntityType<?>> PROJECTILE_ENTITY_TAG = TagKey.of(RegistryKeys.ENTITY_TYPE, AiExCommon.id("projectile"));
     public static final TagKey<Block> MINEABLE_ORE_TAG = TagKey.of(RegistryKeys.BLOCK, AiExCommon.id("npc_ore_mineable"));
 
-    public static void submitTask(final Runnable runnable, final ServerWorld world) {
+    public static void submitTask(final Job runnable, final ServerWorld world) {
         ((InternalServerExtensions) world.getServer()).aiex$submitTask(runnable);
     }
 
@@ -128,6 +128,12 @@ public final class AiExApi {
                 }
             }
         }).build();
+    }
+
+    public interface Job {
+        void run();
+
+        void preRun();
     }
 
     private AiExApi() {

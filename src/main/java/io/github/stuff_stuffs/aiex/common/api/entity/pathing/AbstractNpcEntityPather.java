@@ -100,7 +100,7 @@ public abstract class AbstractNpcEntityPather<C extends EntityPather.EntityConte
                                   boolean immediate) {
     }
 
-    protected static class OutstandingPathRequest<C extends EntityPather.EntityContext, N> implements Runnable {
+    protected static class OutstandingPathRequest<C extends EntityPather.EntityContext, N> implements AiExApi.Job {
         protected final AtomicReference<LastPathData> data;
         protected final AStar<N, C, Target> pathfinder;
         protected final C context;
@@ -128,6 +128,10 @@ public abstract class AbstractNpcEntityPather<C extends EntityPather.EntityConte
             final LastPathData data = this.data.getAcquire();
             final AStar.PathInfo<N> path = pathfinder.findPath(start, context, data.target, data.maxError * INV_ERROR_SCALE, data.partial);
             consumer.accept(path, data);
+        }
+
+        @Override
+        public void preRun() {
         }
     }
 }
