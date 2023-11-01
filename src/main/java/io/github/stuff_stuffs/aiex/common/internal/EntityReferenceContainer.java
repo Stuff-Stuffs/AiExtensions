@@ -4,6 +4,7 @@ import io.github.stuff_stuffs.aiex.common.api.entity_reference.EntityReferenceDa
 import io.github.stuff_stuffs.aiex.common.api.entity_reference.EntityReferenceDataType;
 import io.github.stuff_stuffs.aiex.common.impl.EntityReferenceImpl;
 import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.nbt.NbtCompound;
@@ -18,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,11 +44,21 @@ public class EntityReferenceContainer {
         final UUID uuid = entity.getUuid();
         final RegistryEntry<EntityType<?>> typeEntry = Registries.ENTITY_TYPE.getEntry(entity.getType());
         final RegistryKey<World> worldRegistryKey = entity.getEntityWorld().getRegistryKey();
-        final Map<EntityReferenceDataType<?, ?>, EntityReferenceData> entityData = EntityReferenceDataType.compute(entity);
+        final Map<EntityReferenceDataType<?, ?>, EntityReferenceData> entityData = compute(entity);
         final EntityReferenceImpl old = map.put(uuid, new EntityReferenceImpl(uuid, typeEntry, worldRegistryKey, entityData));
         if (old != null && old.type().value() != entity.getType()) {
             AiExCommon.LOGGER.error("Type changed while updating entity ref!");
         }
+    }
+
+    static Map<EntityReferenceDataType<?, ?>, EntityReferenceData> compute(final Entity entity) {
+        final List<EntityReferenceDataType<?, ?>> applicable = EntityReferenceDataTypeCache.getApplicable(entity.getClass());
+        final Map<EntityReferenceDataType<?, ?>, EntityReferenceData> data = new Reference2ObjectOpenHashMap<>();
+        for (final EntityReferenceDataType<?, ?> type : applicable) {
+            //noinspection unchecked
+            data.put(type, ((EntityReferenceDataType<?, Entity>) type).extract(entity));
+        }
+        return data;
     }
 
     public void load(final LevelStorage.Session session) {

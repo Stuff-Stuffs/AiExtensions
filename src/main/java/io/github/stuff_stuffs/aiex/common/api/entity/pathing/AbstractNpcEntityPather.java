@@ -4,7 +4,7 @@ import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.AStar;
 import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.ShapeCache;
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.debug.AiExDebugFlags;
-import io.github.stuff_stuffs.aiex.common.api.debug.PathDebugInfo;
+import io.github.stuff_stuffs.aiex.common.internal.debug.PathDebugInfo;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.movement.NpcMovementNode;
 import net.minecraft.server.world.ServerWorld;

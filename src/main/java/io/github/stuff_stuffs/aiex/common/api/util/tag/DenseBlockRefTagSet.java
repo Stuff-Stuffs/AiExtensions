@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.util.tag;
 
+import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import io.github.stuff_stuffs.aiex.common.internal.InternalBlockExtensions;
 import net.minecraft.block.Block;
 import net.minecraft.registry.Registries;
@@ -16,6 +17,11 @@ final class DenseBlockRefTagSet extends AbstractDenseRefTagSet<Block> {
 
     private DenseBlockRefTagSet(final TagKey<Block> key) {
         super(key);
+    }
+
+    @Override
+    protected int maxId() {
+        return AiExCommon.NEXT_BLOCK_ID.getAcquire();
     }
 
     @Override

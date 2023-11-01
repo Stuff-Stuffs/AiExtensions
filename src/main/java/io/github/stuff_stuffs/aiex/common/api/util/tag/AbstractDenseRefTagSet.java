@@ -24,6 +24,8 @@ public abstract class AbstractDenseRefTagSet<T> implements DenseRefSet<T> {
         onReset.add(new WeakReference<>(runnable));
     }
 
+    protected abstract int maxId();
+
     protected abstract Registry<T> registry();
 
     protected abstract int idFast(T val);
@@ -40,7 +42,7 @@ public abstract class AbstractDenseRefTagSet<T> implements DenseRefSet<T> {
 
     public void reset() {
         final Registry<T> registry = registry();
-        bits = new long[(registry.size() + Long.SIZE - 1) / Long.SIZE];
+        bits = new long[(maxId() + Long.SIZE - 1) / Long.SIZE];
         for (final T ref : registry) {
             if (registry.getEntry(ref).isIn(key)) {
                 final int bit = idFast(ref);

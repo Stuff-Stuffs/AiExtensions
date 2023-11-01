@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.api.debug;
 
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommands;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
+import io.github.stuff_stuffs.aiex.common.internal.debug.PathDebugInfo;
 import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;

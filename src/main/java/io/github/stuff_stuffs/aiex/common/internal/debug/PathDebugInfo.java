@@ -1,4 +1,4 @@
-package io.github.stuff_stuffs.aiex.common.api.debug;
+package io.github.stuff_stuffs.aiex.common.internal.debug;
 
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommands;
 import net.minecraft.entity.Entity;
@@ -10,6 +10,7 @@ import net.minecraft.util.math.BlockPos;
 import java.util.function.Predicate;
 
 public class PathDebugInfo {
+    public final int entityId;
     public final Identifier[] idToName;
     public final BlockPos[] positions;
     public final int[] nodeTypeIds;
@@ -28,6 +29,23 @@ public class PathDebugInfo {
             throw new RuntimeException();
         }
         this.entity = entity;
+        entityId = entity.getId();
+    }
+
+    private PathDebugInfo(final Identifier[] name, final BlockPos[] positions, final int[] ids, final int entityId) {
+        idToName = name;
+        this.positions = positions;
+        nodeTypeIds = ids;
+        for (final int id : ids) {
+            if (id < 0 || id >= name.length) {
+                throw new RuntimeException();
+            }
+        }
+        if (positions.length != ids.length) {
+            throw new RuntimeException();
+        }
+        entity = null;
+        this.entityId = entityId;
     }
 
     public boolean shouldSendTo(final ServerPlayerEntity player) {
@@ -52,6 +70,7 @@ public class PathDebugInfo {
             buf.writeBlockPos(positions[i]);
             buf.writeInt(nodeTypeIds[i]);
         }
+        buf.writeInt(entityId);
     }
 
     public static PathDebugInfo read(final PacketByteBuf buf) {
@@ -67,6 +86,7 @@ public class PathDebugInfo {
             positions[i] = buf.readBlockPos();
             nodeTypeIds[i] = buf.readInt();
         }
-        return new PathDebugInfo(idToName, positions, nodeTypeIds, null);
+        final int entityId = buf.readInt();
+        return new PathDebugInfo(idToName, positions, nodeTypeIds, entityId);
     }
 }

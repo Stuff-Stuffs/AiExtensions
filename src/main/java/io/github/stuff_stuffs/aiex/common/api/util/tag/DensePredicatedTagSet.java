@@ -18,7 +18,7 @@ public abstract class DensePredicatedTagSet<T> implements DenseRefSet<T> {
         bits = new long[0];
         reset = () -> {
             final Registry<T> registry = registry();
-            bits = new long[(registry.size() + Long.SIZE - 1) / Long.SIZE];
+            bits = new long[(maxId() + Long.SIZE - 1) / Long.SIZE];
             for (final T ref : registry) {
                 if (combiner.apply(delegate.isIn(ref), predicate.test(ref))) {
                     final int bit = idFast(ref);
@@ -37,6 +37,8 @@ public abstract class DensePredicatedTagSet<T> implements DenseRefSet<T> {
         resetConsumer.accept(reset);
         delegate.onReset(reset);
     }
+
+    protected abstract int maxId();
 
     @Override
     public void onReset(final Runnable runnable) {

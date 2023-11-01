@@ -16,6 +16,7 @@ import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import io.github.stuff_stuffs.aiex.common.api.util.tag.DenseRefSet;
 import io.github.stuff_stuffs.aiex.common.impl.brain.AiBrainImpl;
 import io.github.stuff_stuffs.aiex.common.impl.util.NoopSpannedLoggerImpl;
+import io.github.stuff_stuffs.aiex.common.internal.debug.AreaOfInterestDebugMessage;
 import io.github.stuff_stuffs.aiex.common.mixin.MixinWorldSavePath;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.CommonLifecycleEvents;
@@ -35,10 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class AiExCommon implements ModInitializer {
     public static final String MOD_ID = "aiex";
@@ -68,10 +66,7 @@ public class AiExCommon implements ModInitializer {
         AiExDebugFlags.init();
         AiExCommands.init();
         AfterRegistryFreezeEvent.EVENT.register(EntityReferenceDataTypeCache::clear);
-    }
-
-    public static <T> List<? extends T> filter(final List<T> all, final Class<?> type, final Map<Class<?>, List<T>> elementsByType) {
-        return elementsByType.computeIfAbsent(type, typeClass -> all.stream().filter(typeClass::isInstance).collect(Collectors.toList()));
+        Registry.register(AiExDebugFlags.REGISTRY, id("aoi"), AreaOfInterestDebugMessage.FLAG);
     }
 
     public static <B, T extends B> TypeFilter<B, T> createDelegatingTypeFilter(final Class<T> cls) {
