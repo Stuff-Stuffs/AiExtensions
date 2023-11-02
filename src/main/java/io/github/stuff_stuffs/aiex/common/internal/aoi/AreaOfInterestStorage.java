@@ -5,7 +5,6 @@ import io.github.stuff_stuffs.aiex.common.api.debug.AiExDebugFlags;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import io.github.stuff_stuffs.aiex.common.internal.debug.AreaOfInterestDebugMessage;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import net.minecraft.nbt.NbtCompound;
@@ -15,14 +14,13 @@ import net.minecraft.world.World;
 
 import java.nio.file.Path;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Optional;
 
 public class AreaOfInterestStorage implements AutoCloseable {
     //5 minutes
     private static final long TIMEOUT = 20 * 60 * 5;
-    private final Map<AoiSectionPos, SectionEntry> sections;
-    private final Long2ObjectMap<DatabaseSectionEntry> databaseSections;
+    private final Object2ObjectLinkedOpenHashMap<AoiSectionPos, SectionEntry> sections;
+    private final Long2ObjectLinkedOpenHashMap<DatabaseSectionEntry> databaseSections;
     private final AoiStorageIoWorker worker;
     private final RegistryKey<World> worldKey;
     private final int bottomY;
@@ -39,7 +37,7 @@ public class AreaOfInterestStorage implements AutoCloseable {
     }
 
     public AreaOfInterestSection get(final AoiSectionPos pos) {
-        SectionEntry section = sections.get(pos);
+        SectionEntry section = sections.getAndMoveToLast(pos);
         if (section != null) {
             section.lastAccessed = tickCount;
             return section.section;
@@ -54,13 +52,13 @@ public class AreaOfInterestStorage implements AutoCloseable {
         } catch (final Exception e) {
             section = new SectionEntry(new AreaOfInterestSection(pos, bottomY, worldHeight), tickCount);
         }
-        sections.put(pos, section);
+        sections.putAndMoveToLast(pos, section);
         return section.section;
     }
 
     public AoiDatabaseSection getDatabase(final long id) {
         final long offset = id / AoiDatabaseSection.SIZE;
-        DatabaseSectionEntry section = databaseSections.get(offset);
+        DatabaseSectionEntry section = databaseSections.getAndMoveToLast(offset);
         if (section != null) {
             section.lastAccessed = tickCount;
             return section.section;
@@ -75,14 +73,14 @@ public class AreaOfInterestStorage implements AutoCloseable {
         } catch (final Exception e) {
             section = new DatabaseSectionEntry(new AoiDatabaseSection(offset * AoiDatabaseSection.SIZE), tickCount);
         }
-        databaseSections.put(offset, section);
+        databaseSections.putAndMoveToLast(offset, section);
         return section.section;
     }
 
     public Optional<AoiSectionPos> getRefLocation(final long id) {
         try {
             final long offset = id / AoiDatabaseSection.SIZE;
-            DatabaseSectionEntry section = databaseSections.get(offset);
+            DatabaseSectionEntry section = databaseSections.getAndMoveToLast(offset);
             if (section != null) {
                 section.lastAccessed = tickCount;
                 return section.section.get(id);
@@ -92,7 +90,7 @@ public class AreaOfInterestStorage implements AutoCloseable {
                 return Optional.empty();
             }
             section = new DatabaseSectionEntry(new AoiDatabaseSection(offset * AoiDatabaseSection.SIZE, load.get()), tickCount);
-            databaseSections.put(offset, section);
+            databaseSections.putAndMoveToLast(offset, section);
             return section.section.get(id);
         } catch (final Exception e) {
             AiExCommon.LOGGER.error("Exception while loading aoi location ref!", e);
@@ -100,7 +98,17 @@ public class AreaOfInterestStorage implements AutoCloseable {
         }
     }
 
-    public void tick() {
+    public boolean markDirty(final AoiSectionPos pos) {
+        final SectionEntry entry = sections.getAndMoveToLast(pos);
+        if (entry == null) {
+            return false;
+        }
+        entry.lastAccessed = tickCount;
+        entry.section.markDirty();
+        return true;
+    }
+
+    public void tick(final World world) {
         tickCount++;
         final Iterator<SectionEntry> iterator = sections.values().iterator();
         while (iterator.hasNext()) {
@@ -111,6 +119,8 @@ public class AreaOfInterestStorage implements AutoCloseable {
                     worker.saveSection(next.section);
                 }
                 iterator.remove();
+            } else {
+                next.section.tick(world);
             }
         }
         final ObjectIterator<DatabaseSectionEntry> databaseIterator = databaseSections.values().iterator();
@@ -122,6 +132,8 @@ public class AreaOfInterestStorage implements AutoCloseable {
                     worker.saveDatabaseSection(next.section);
                 }
                 databaseIterator.remove();
+            } else {
+                break;
             }
         }
     }

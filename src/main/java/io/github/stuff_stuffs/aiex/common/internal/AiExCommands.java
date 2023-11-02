@@ -1,8 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.internal;
 
-import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.stuff_stuffs.aiex.common.api.AiWorldExtensions;
 import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestType;
 import io.github.stuff_stuffs.aiex.common.api.debug.AiExDebugFlags;
@@ -11,12 +9,14 @@ import io.github.stuff_stuffs.aiex.common.internal.debug.PathDebugInfo;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.command.argument.EnumArgumentType;
 import net.minecraft.command.argument.RegistryEntryArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.util.StringIdentifiable;
 
 import java.util.Collection;
 import java.util.Map;
@@ -33,6 +33,7 @@ public final class AiExCommands {
     public static final Map<UUID, AreaOfInterestType<?>> AOI_WATCHING = new Object2ObjectOpenHashMap<>();
     public static Consumer<AreaOfInterestDebugMessage> CLIENT_AOI_DEBUG_APPLICATOR = message -> {
     };
+    public static boolean ENABLE_AOI_DEBUGGING = FabricLoader.getInstance().isDevelopmentEnvironment();
 
     public static void init() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
@@ -44,22 +45,19 @@ public final class AiExCommands {
                 }
                 return 0;
             }))));
-            dispatcher.register(CommandManager.literal("aiexAoiDebug").requires(source -> source.hasPermissionLevel(2)).then(CommandManager.argument("players", EntityArgumentType.players()).executes(new Command<ServerCommandSource>() {
-                @Override
-                public int run(final CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
-                    final Collection<ServerPlayerEntity> players = EntityArgumentType.getPlayers(context, "players");
-                    final Set<AreaOfInterestType<?>> types = new ObjectOpenHashSet<>();
-                    for (final ServerPlayerEntity player : players) {
-                        final AreaOfInterestType<?> type = AOI_WATCHING.remove(player.getUuid());
-                        if (type != null) {
-                            types.add(type);
-                        }
+            final var debugSet = CommandManager.argument("players", EntityArgumentType.players()).executes(context -> {
+                final Collection<ServerPlayerEntity> players = EntityArgumentType.getPlayers(context, "players");
+                final Set<AreaOfInterestType<?>> types = new ObjectOpenHashSet<>();
+                for (final ServerPlayerEntity player : players) {
+                    final AreaOfInterestType<?> type = AOI_WATCHING.remove(player.getUuid());
+                    if (type != null) {
+                        types.add(type);
                     }
-                    for (final AreaOfInterestType<?> type : types) {
-                        AiExDebugFlags.send(AreaOfInterestDebugMessage.FLAG, new AreaOfInterestDebugMessage.Clear(type), context.getSource().getWorld());
-                    }
-                    return 0;
                 }
+                for (final AreaOfInterestType<?> type : types) {
+                    AiExDebugFlags.send(AreaOfInterestDebugMessage.FLAG, new AreaOfInterestDebugMessage.Clear(type), context.getSource().getWorld());
+                }
+                return 0;
             }).then(CommandManager.argument("type", RegistryEntryArgumentType.registryEntry(registryAccess, AreaOfInterestType.REGISTRY_KEY)).executes(context -> {
                 final Collection<ServerPlayerEntity> players = EntityArgumentType.getPlayers(context, "players");
                 final AreaOfInterestType<?> type = RegistryEntryArgumentType.getRegistryEntry(context, "type", AreaOfInterestType.REGISTRY_KEY).value();
@@ -76,8 +74,44 @@ public final class AiExCommands {
                     ((AiWorldExtensions) context.getSource().getWorld()).aiex$resyncAreaOfInterest(oldType);
                 }
                 return 0;
-            }))));
+            }));
+            final var debugEnable = CommandManager.argument("enable", EnabledArgumentType.TYPE).executes(context -> {
+                final Enabled enabled = EnabledArgumentType.get(context, "enable");
+                ENABLE_AOI_DEBUGGING = enabled == Enabled.TRUE;
+                return 0;
+            }).then(CommandManager.literal("clearData").executes(context -> {
+                final Enabled enabled = EnabledArgumentType.get(context, "enable");
+                ENABLE_AOI_DEBUGGING = enabled == Enabled.TRUE;
+                AOI_WATCHING.clear();
+                return 0;
+            }));
+            dispatcher.register(CommandManager.literal("aiexAoiDebug").requires(source -> source.hasPermissionLevel(2)).then(CommandManager.literal("watch").then(debugSet)).then(CommandManager.literal("enable").then(debugEnable)));
         });
+    }
+
+    private static final class EnabledArgumentType extends EnumArgumentType<Enabled> {
+        public static final EnabledArgumentType TYPE = new EnabledArgumentType();
+
+        public static Enabled get(final CommandContext<?> context, final String id) {
+            return context.getArgument(id, Enabled.class);
+        }
+
+        private EnabledArgumentType() {
+            super(StringIdentifiable.createCodec(Enabled::values), Enabled::values);
+        }
+    }
+
+    private enum Enabled implements StringIdentifiable {
+        TRUE,
+        FALSE;
+
+        @Override
+        public String asString() {
+            return switch (this) {
+                case TRUE -> "true";
+                case FALSE -> "false";
+            };
+        }
     }
 
     private AiExCommands() {

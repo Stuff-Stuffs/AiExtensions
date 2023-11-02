@@ -7,6 +7,7 @@ import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 
 public interface MemoryType<T> {
@@ -16,9 +17,15 @@ public interface MemoryType<T> {
 
     Codec<T> codec();
 
-    Collection<MemoryReference<?>> insideOf(T value);
+    default Collection<? extends MemoryReference<?>> insideOf(final T value) {
+        return Collections.emptySet();
+    }
 
-    Optional<T> forgetContained(MemoryReference<?> other, T currentValue);
+    default Optional<T> forgetContained(final MemoryReference<?> other, final T currentValue) {
+        return Optional.of(currentValue);
+    }
 
-    <K> Optional<T> changeContained(Memory<K> other, K oldValue, T currentValue);
+    default <K> Optional<T> changeContained(final Memory<K> other, final K oldValue, final T currentValue) {
+        return Optional.of(currentValue);
+    }
 }

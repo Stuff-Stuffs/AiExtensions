@@ -1,9 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.internal.aoi;
 
-import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterest;
-import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestBounds;
-import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestEntry;
-import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestType;
+import io.github.stuff_stuffs.aiex.common.api.aoi.*;
 import io.github.stuff_stuffs.aiex.common.impl.aoi.AreaOfInterestEntryImpl;
 import io.github.stuff_stuffs.aiex.common.impl.aoi.AreaOfInterestReferenceImpl;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
@@ -28,12 +25,14 @@ public class AreaOfInterestSection {
     public static final long VERSION = 0;
     private final AoiSectionPos pos;
     private final Long2ObjectMap<AreaOfInterestEntry<?>> areas;
+    private final Long2ObjectMap<AreaOfInterestEntry<?>> ticking;
     private final AoiOctTree tree;
     private boolean dirty = false;
 
     public AreaOfInterestSection(final AoiSectionPos pos, final int yStart, final int worldHeight) {
         this.pos = pos;
         areas = new Long2ObjectLinkedOpenHashMap<>();
+        ticking = new Long2ObjectLinkedOpenHashMap<>();
         final ChunkPos lower = pos.lower();
         tree = new AoiOctTree(lower.getStartX(), yStart, lower.getStartZ(), worldHeight);
     }
@@ -41,6 +40,7 @@ public class AreaOfInterestSection {
     public AreaOfInterestSection(final AoiSectionPos pos, final NbtCompound nbt, final RegistryKey<World> worldKey, final int yStart, final int worldHeight) {
         this.pos = pos;
         areas = new Long2ObjectLinkedOpenHashMap<>();
+        ticking = new Long2ObjectLinkedOpenHashMap<>();
         final ChunkPos lower = pos.lower();
         tree = new AoiOctTree(lower.getStartX(), yStart, lower.getStartZ(), worldHeight);
         if (nbt.getLong("version") != VERSION) {
@@ -67,10 +67,15 @@ public class AreaOfInterestSection {
                     AiExCommon.LOGGER.error("Could not decode aoi of type {}!", entry.getString("type"));
                     continue;
                 }
+
                 //noinspection rawtypes,unchecked
                 final AreaOfInterestEntryImpl areaOfInterestEntry = new AreaOfInterestEntryImpl<>(result.get(), bounds.get(), new AreaOfInterestReferenceImpl(l, worldKey, result.get().type()));
                 areas.put(l, areaOfInterestEntry);
                 tree.add(areaOfInterestEntry);
+                if (areaOfInterestEntry.value() instanceof TickingAreaOfInterest) {
+                    ticking.put(l, areaOfInterestEntry);
+                }
+                areaOfInterestEntry.value().setRef(areaOfInterestEntry.reference());
             } catch (final NumberFormatException e) {
                 AiExCommon.LOGGER.error("Invalid aoi id {}!", key);
             } catch (final InvalidIdentifierException e) {
@@ -141,8 +146,13 @@ public class AreaOfInterestSection {
     }
 
     public void add(final AreaOfInterestEntryImpl<?> entry) {
-        areas.put(((AreaOfInterestReferenceImpl<?>) entry.reference()).id(), entry);
+        final long id = ((AreaOfInterestReferenceImpl<?>) entry.reference()).id();
+        entry.value().setRef(entry.reference());
+        areas.put(id, entry);
         tree.add(entry);
+        if (entry.value() instanceof TickingAreaOfInterest) {
+            ticking.put(id, entry);
+        }
         dirty = true;
     }
 
@@ -152,7 +162,18 @@ public class AreaOfInterestSection {
             return Optional.empty();
         }
         tree.remove(id);
+        ticking.remove(id);
         dirty = true;
         return Optional.of(entry);
+    }
+
+    public void tick(final World world) {
+        for (final AreaOfInterestEntry<?> aoi : ticking.values()) {
+            ((TickingAreaOfInterest) aoi).tick(world, aoi.bounds(), aoi.reference());
+        }
+    }
+
+    public void markDirty() {
+        dirty = true;
     }
 }

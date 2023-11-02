@@ -123,4 +123,8 @@ public interface BrainNode<C, R, FC> {
     default <R0, R1> BrainNode<C, R1, FC> parallel(final BrainNode<C, R0, FC> node, final BiFunction<R, R0, R1> combiner) {
         return new ParallelPairBrainNode<>(this, node, (context, firstResult, secondResult) -> combiner.apply(firstResult, secondResult));
     }
+
+    default <R0> BrainNode<C, R0, FC> contextCapture(final BiFunction<FC, R, R0> combiner) {
+        return new ContextCapturingBrainNode<>(this, combiner);
+    }
 }

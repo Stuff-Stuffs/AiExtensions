@@ -1,5 +1,10 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.basic.target;
 
+import io.github.stuff_stuffs.aiex.common.api.AiWorldExtensions;
+import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterest;
+import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestBounds;
+import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestEntry;
+import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestType;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
@@ -12,7 +17,6 @@ import net.minecraft.util.math.Box;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 public final class BrainNodeTargets {
@@ -45,11 +49,24 @@ public final class BrainNodeTargets {
         };
     }
 
+    public static <C extends Entity, R, FC, A extends AreaOfInterest> BrainNode<C, Optional<R>, FC> areaTarget(final AreaOfInterestType<A> type, final EventExtractor<C, R, FC, AreaOfInterestEntry<A>> extractor, final int radius, final boolean dynamic) {
+        return new AbstractSingleTargetingBrainNode<>(dynamic) {
+            @Override
+            protected Optional<R> query(final BrainContext<C> context, final FC arg) {
+                final int x = context.entity().getBlockX();
+                final int y = context.entity().getBlockY();
+                final int z = context.entity().getBlockZ();
+                final AreaOfInterestBounds bounds = new AreaOfInterestBounds(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius);
+                return extractor.extract(context, arg, ((AiWorldExtensions) context.world()).aiex$getAoiWorld().intersecting(bounds, type));
+            }
+        };
+    }
+
     public interface EntityFilter<C, E extends Entity, FC> {
         boolean test(BrainContext<C> context, FC arg, E entity);
     }
 
-    public interface EventExtractor<C, R, FC, E extends AiBrainEvent> {
+    public interface EventExtractor<C, R, FC, E> {
         Optional<R> extract(BrainContext<C> context, FC arg, Stream<E> events);
     }
 

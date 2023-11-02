@@ -7,7 +7,6 @@ import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestType;
 import io.github.stuff_stuffs.aiex.common.api.debug.DebugFlag;
 import io.github.stuff_stuffs.aiex.common.impl.aoi.AreaOfInterestReferenceImpl;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommands;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 

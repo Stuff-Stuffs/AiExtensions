@@ -8,7 +8,7 @@ public interface AreaOfInterestWorld {
 
     <T extends AreaOfInterest> Stream<AreaOfInterestEntry<T>> intersecting(AreaOfInterestBounds bounds, AreaOfInterestType<T> type);
 
-    <T extends AreaOfInterest> Optional<AreaOfInterestEntry<T>> get(AreaOfInterestReference<T> reference);
+    <T extends AreaOfInterest> Optional<AreaOfInterestEntry<T>> get(AreaOfInterestReference<T> ref);
 
     <T extends AreaOfInterest> AreaOfInterestEntry<T> add(T value, AreaOfInterestBounds bounds);
 
@@ -17,4 +17,6 @@ public interface AreaOfInterestWorld {
     boolean remove(AreaOfInterestReference<?> ref);
 
     <T extends AreaOfInterest> boolean update(AreaOfInterestReference<T> ref, T value);
+
+    boolean markDirty(AreaOfInterestReference<?> ref);
 }

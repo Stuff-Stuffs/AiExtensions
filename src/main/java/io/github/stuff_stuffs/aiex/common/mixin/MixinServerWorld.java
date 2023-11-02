@@ -56,7 +56,7 @@ public abstract class MixinServerWorld extends World implements AiWorldExtension
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void initHook(final MinecraftServer server, final Executor workerExecutor, final LevelStorage.Session session, final ServerWorldProperties properties, final RegistryKey<World> worldKey, final DimensionOptions dimensionOptions, final WorldGenerationProgressListener worldGenerationProgressListener, final boolean debugWorld, final long seed, final List<Spawner> spawners, final boolean shouldTickTime, final RandomSequencesState randomSequencesState, final CallbackInfo ci) {
-        aiex$aoiWorld = new AreaOfInterestWorldImpl(session.getWorldDirectory(worldKey).resolve("aeix_aoi"), worldKey, getBottomY(), getHeight());
+        aiex$aoiWorld = new AreaOfInterestWorldImpl(session.getWorldDirectory(worldKey), worldKey, getBottomY(), getHeight());
     }
 
     @Override

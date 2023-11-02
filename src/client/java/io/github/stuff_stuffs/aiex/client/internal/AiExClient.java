@@ -35,7 +35,6 @@ public class AiExClient implements ClientModInitializer {
     private static final Int2ObjectMap<Entry> TIME_OUTS = new Int2ObjectLinkedOpenHashMap<>();
     private static final Long2ObjectMap<AoiEntry> AOI_CACHE = new Long2ObjectOpenHashMap<>();
 
-
     @Override
     public void onInitializeClient() {
         ClientPlayNetworking.registerGlobalReceiver(AiExDebugFlags.CHANNEL, (client, handler, buf, responseSender) -> {
@@ -86,7 +85,7 @@ public class AiExClient implements ClientModInitializer {
                 final ParticleEffect[] effects = new ParticleEffect[info.idToName.length];
                 int idx = 0;
                 for (final Identifier identifier : info.idToName) {
-                    final int hash = HashCommon.murmurHash3(identifier.hashCode() + idx);
+                    final int hash = HashCommon.murmurHash3(identifier.hashCode() + idx + entry.pathDebugInfo.entityId);
                     final int r = hash & 255;
                     final int g = (hash >>> 8) & 255;
                     final int b = (hash >>> 16) & 255;

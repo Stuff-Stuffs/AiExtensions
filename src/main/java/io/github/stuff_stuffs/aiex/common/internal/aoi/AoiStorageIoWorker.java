@@ -42,7 +42,6 @@ public class AoiStorageIoWorker implements AutoCloseable {
 
     public void saveRoot(final long nextId) {
         storageWorker.askFallible(listener -> new TaskQueue.PrioritizedTask(Priority.SAVE.ordinal(), () -> {
-            listener.send(Either.left(null));
             try {
                 final NbtCompound write = new NbtCompound();
                 write.putLong("nextId", nextId);
@@ -62,7 +61,6 @@ public class AoiStorageIoWorker implements AutoCloseable {
 
     public void saveSection(final AreaOfInterestSection section) {
         storageWorker.askFallible(listener -> new TaskQueue.PrioritizedTask(Priority.SAVE.ordinal(), () -> {
-            listener.send(Either.left(null));
             try {
                 final NbtCompound write = section.write();
                 final Path filename = sectionFilename(section.pos());
@@ -85,7 +83,6 @@ public class AoiStorageIoWorker implements AutoCloseable {
 
     public void saveDatabaseSection(final AoiDatabaseSection section) {
         storageWorker.askFallible(listener -> new TaskQueue.PrioritizedTask(Priority.SAVE.ordinal(), () -> {
-            listener.send(Either.left(null));
             try {
                 final NbtCompound write = section.write();
                 final Path filename = databaseFilename(section.offset() / AoiDatabaseSection.SIZE);

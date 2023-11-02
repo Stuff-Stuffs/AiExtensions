@@ -101,7 +101,7 @@ public class MemoriesImpl implements AiBrainView.Memories {
     }
 
     private <T> void changeUpdateNetwork(final MemoryImpl<T> memory) {
-        final Collection<MemoryReference<?>> collection = memory.type().insideOf(memory.get());
+        final Collection<? extends MemoryReference<?>> collection = memory.type().insideOf(memory.get());
         final LongSet containing = this.containing.computeIfAbsent(memory.id(), i -> new LongOpenHashSet());
         final LongSet diff = new LongOpenHashSet(containing);
         final LongSet touched = new LongOpenHashSet();

@@ -3,6 +3,7 @@ package io.github.stuff_stuffs.aiex.common.api.aoi;
 import com.mojang.serialization.Codec;
 import io.github.stuff_stuffs.aiex.common.internal.aoi.AoiSectionPos;
 import net.minecraft.util.Util;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
 
@@ -20,6 +21,10 @@ public record AreaOfInterestBounds(int minX, int minY, int minZ, int maxX, int m
         if (!(minX < maxX) || !(minY < maxY) || !(minZ < maxZ)) {
             throw new IllegalArgumentException();
         }
+    }
+
+    public BlockPos center() {
+        return new BlockPos(minX + (maxX-minX)/2, minY + (maxY-minY)/2, maxZ + (maxZ-minZ)/2);
     }
 
     public static AreaOfInterestBounds fromDimensions(final int x, final int y, final int z, final int xL, final int yL, final int zL) {

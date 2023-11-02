@@ -12,7 +12,7 @@ import net.minecraft.util.shape.VoxelShapes;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class CollisionHelper<B, F, R> {
-    private static final int CACHE_BITS = 4;
+    private static final int CACHE_BITS = 3;
     private static final int CACHE_SIZE = 1 << CACHE_BITS;
     private static final int CACHE_MASK = CACHE_SIZE - 1;
     protected static final VoxelShape FULL_CUBE = VoxelShapes.fullCube();

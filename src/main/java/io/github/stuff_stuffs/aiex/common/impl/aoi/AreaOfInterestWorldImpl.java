@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.impl.aoi;
 
 import io.github.stuff_stuffs.aiex.common.api.aoi.*;
 import io.github.stuff_stuffs.aiex.common.api.debug.AiExDebugFlags;
+import io.github.stuff_stuffs.aiex.common.internal.AiExCommands;
 import io.github.stuff_stuffs.aiex.common.internal.aoi.AoiDatabaseSection;
 import io.github.stuff_stuffs.aiex.common.internal.aoi.AoiSectionPos;
 import io.github.stuff_stuffs.aiex.common.internal.aoi.AreaOfInterestSection;
@@ -41,7 +42,7 @@ public class AreaOfInterestWorldImpl implements AreaOfInterestWorld, AutoCloseab
 
     public void tick(final ServerWorld world) {
         checkInit();
-        storage.tick();
+        storage.tick(world);
         for (final AreaOfInterestDebugMessage message : debugMessages) {
             AiExDebugFlags.send(AreaOfInterestDebugMessage.FLAG, message, world);
         }
@@ -59,8 +60,8 @@ public class AreaOfInterestWorldImpl implements AreaOfInterestWorld, AutoCloseab
     }
 
     @Override
-    public <T extends AreaOfInterest> Optional<AreaOfInterestEntry<T>> get(final AreaOfInterestReference<T> reference) {
-        final AreaOfInterestReferenceImpl<T> casted = (AreaOfInterestReferenceImpl<T>) reference;
+    public <T extends AreaOfInterest> Optional<AreaOfInterestEntry<T>> get(final AreaOfInterestReference<T> ref) {
+        final AreaOfInterestReferenceImpl<T> casted = (AreaOfInterestReferenceImpl<T>) ref;
         if (!casted.world().equals(worldKey)) {
             return Optional.empty();
         }
@@ -74,7 +75,7 @@ public class AreaOfInterestWorldImpl implements AreaOfInterestWorld, AutoCloseab
             return Optional.empty();
         }
         final AreaOfInterestEntry<?> entry = opt.get();
-        if (entry.value().type() != reference.type()) {
+        if (entry.value().type() != ref.type()) {
             return Optional.empty();
         }
         //noinspection unchecked
@@ -120,8 +121,10 @@ public class AreaOfInterestWorldImpl implements AreaOfInterestWorld, AutoCloseab
         final AoiSectionPos newPos = AoiSectionPos.from(new ChunkPos(newBounds.minX() / 16, newBounds.minZ() / 16));
         storage.get(newPos).add(newEntry);
         storage.getDatabase(casted.id()).set(casted.id(), newPos);
-        debugMessages.add(new AreaOfInterestDebugMessage.Remove(casted.type(), casted.id()));
-        addDebugMessage(newEntry.value().type(), newEntry.value(), newBounds, casted.id());
+        if (AiExCommands.ENABLE_AOI_DEBUGGING) {
+            debugMessages.add(new AreaOfInterestDebugMessage.Remove(casted.type(), casted.id()));
+            addDebugMessage(newEntry.value().type(), newEntry.value(), newBounds, casted.id());
+        }
         return true;
     }
 
@@ -146,7 +149,9 @@ public class AreaOfInterestWorldImpl implements AreaOfInterestWorld, AutoCloseab
             return false;
         }
         storage.getDatabase(casted.id()).set(casted.id(), AoiDatabaseSection.INVALID_POS);
-        debugMessages.add(new AreaOfInterestDebugMessage.Remove(casted.type(), casted.id()));
+        if (AiExCommands.ENABLE_AOI_DEBUGGING) {
+            debugMessages.add(new AreaOfInterestDebugMessage.Remove(casted.type(), casted.id()));
+        }
         return true;
     }
 
@@ -168,9 +173,24 @@ public class AreaOfInterestWorldImpl implements AreaOfInterestWorld, AutoCloseab
         //noinspection rawtypes,unchecked
         final AreaOfInterestEntryImpl<?> newEntry = new AreaOfInterestEntryImpl<>(value, opt.get().bounds(), (AreaOfInterestReferenceImpl) opt.get().reference());
         section.add(newEntry);
-        debugMessages.add(new AreaOfInterestDebugMessage.Remove(casted.type(), casted.id()));
-        addDebugMessage(newEntry.value().type(), newEntry.value(), newEntry.bounds(), casted.id());
+        if (AiExCommands.ENABLE_AOI_DEBUGGING) {
+            debugMessages.add(new AreaOfInterestDebugMessage.Remove(casted.type(), casted.id()));
+            addDebugMessage(newEntry.value().type(), newEntry.value(), newEntry.bounds(), casted.id());
+        }
         return true;
+    }
+
+    @Override
+    public boolean markDirty(final AreaOfInterestReference<?> ref) {
+        final AreaOfInterestReferenceImpl<?> casted = (AreaOfInterestReferenceImpl<?>) ref;
+        if (!casted.world().equals(worldKey)) {
+            return false;
+        }
+        final Optional<AoiSectionPos> location = storage.getRefLocation(casted.id());
+        if (location.isEmpty()) {
+            return false;
+        }
+        return storage.markDirty(location.get());
     }
 
     @Override
