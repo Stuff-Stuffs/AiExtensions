@@ -169,7 +169,7 @@ public class AreaOfInterestSection {
 
     public void tick(final World world) {
         for (final AreaOfInterestEntry<?> aoi : ticking.values()) {
-            ((TickingAreaOfInterest) aoi).tick(world, aoi.bounds(), aoi.reference());
+            ((TickingAreaOfInterest) aoi.value()).tick(world, aoi.bounds(), aoi.reference());
         }
     }
 

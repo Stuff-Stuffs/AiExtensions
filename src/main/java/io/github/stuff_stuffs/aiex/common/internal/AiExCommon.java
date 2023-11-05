@@ -5,7 +5,7 @@ import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.AiExGameRules;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.BasicMemoryTypes;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.BasicMemories;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.debug.AiExDebugFlags;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiEntity;
@@ -66,7 +66,7 @@ public class AiExCommon implements ModInitializer {
         EntityReferenceDataType.REGISTRY.getCodec();
         AiExDebugFlags.init();
         AiExCommands.init();
-        BasicMemoryTypes.init();
+        BasicMemories.init();
         AfterRegistryFreezeEvent.EVENT.register(EntityReferenceDataTypeCache::clear);
         Registry.register(AiExDebugFlags.REGISTRY, id("aoi"), AreaOfInterestDebugMessage.FLAG);
     }

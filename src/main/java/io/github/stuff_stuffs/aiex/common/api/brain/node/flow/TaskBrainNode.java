@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import io.github.stuff_stuffs.aiex.common.api.util.StringTemplate;
@@ -84,5 +85,9 @@ public class TaskBrainNode<C, R, P, FC, FC0> implements BrainNode<C, TaskBrainNo
 
     public static <R> Predicate<Result<R>> successInnerPredicate(final Predicate<R> predicate) {
         return result -> result instanceof TaskBrainNode.Success<R> success && predicate.test(success.value);
+    }
+
+    public static <C, R, P, FC, FC0> BrainNode<C, R, FC> expectedTask(final TaskKey<R, P, FC0> key, final BiFunction<? super FC, BrainContext<C>, ? extends P> parameterFactory, final BiFunction<? super FC, BrainContext<C>, ? extends FC0> argExtractor) {
+        return BrainNodes.expectResult(new TaskBrainNode<>(key, parameterFactory, argExtractor), () -> new RuntimeException("Expected task " + key + " was absent"));
     }
 }

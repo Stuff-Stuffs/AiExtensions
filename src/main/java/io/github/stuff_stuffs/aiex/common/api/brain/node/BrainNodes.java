@@ -1,7 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node;
 
 import com.mojang.datafixers.util.Unit;
-import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
@@ -39,26 +38,6 @@ public final class BrainNodes {
         };
     }
 
-    public static <C, R, FC> BrainNode<C, R, FC> expect(final BrainNode<C, Optional<R>, FC> node) {
-        return node.adaptResult(Optional::get);
-    }
-
-    public static <C, R0, R1, FC> BrainNode<C, Optional<R1>, FC> mapPresent(final BrainNode<C, Optional<R0>, FC> source, final BrainNode<C, R1, R0> present) {
-        return mapPresent(source, present, empty());
-    }
-
-    public static <C, R0, R1, FC> BrainNode<C, Optional<R1>, FC> mapPresent(final BrainNode<C, Optional<R0>, FC> source, final BrainNode<C, R1, R0> present, final BrainNode<C, Unit, Unit> absent) {
-        return present(source, present.adaptResult(Optional::of), absent.adaptResult(r -> Optional.empty()));
-    }
-
-    public static <C, R0, R1, FC> BrainNode<C, R1, FC> present(final BrainNode<C, Optional<R0>, FC> source, final BrainNode<C, R1, R0> present, final BrainNode<C, R1, Unit> absent) {
-        return source.ifThen((context, r0) -> r0.isPresent(), present.adaptArg(Optional::get), absent.adaptArg(p -> Unit.INSTANCE));
-    }
-
-    public static <C, R, FC> BrainNode<C, R, FC> expect(final BrainNode<C, Optional<R>, FC> node, final Supplier<? extends RuntimeException> errorFactory) {
-        return node.adaptResult(res -> res.orElseThrow(errorFactory));
-    }
-
     public static <C, R, FC> BrainNode<C, R, FC> expectResult(final BrainNode<C, TaskBrainNode.Result<R>, FC> node, final Supplier<? extends RuntimeException> errorFactory) {
         return node.adaptResult(res -> {
             if (res instanceof TaskBrainNode.Failure<R>) {
@@ -66,18 +45,6 @@ public final class BrainNodes {
             }
             return ((TaskBrainNode.Success<R>) res).value();
         });
-    }
-
-    public static <C, R, FC> BrainNode<C, R, FC> orElse(final BrainNode<C, Optional<R>, FC> node, final R fallback) {
-        return node.adaptResult(res -> res.orElse(fallback));
-    }
-
-    public static <C, R, FC> BrainNode<C, R, FC> orElseGet(final BrainNode<C, Optional<R>, FC> node, final Function<BrainContext<C>, R> factory) {
-        return node.adaptResult((ctx, res) -> res.orElseGet(() -> factory.apply(ctx)));
-    }
-
-    public static <C, R, FC> BrainNode<C, Optional<R>, FC> or(final BrainNode<C, Optional<R>, FC> node, final Function<BrainContext<C>, Optional<R>> other) {
-        return node.adaptResult((ctx, res) -> res.or(() -> other.apply(ctx)));
     }
 
     public static <C, R, FC0, FC1> BrainNode<C, Optional<R>, FC0> flatMap(final BrainNode<C, Optional<FC1>, FC0> start, final BrainNode<C, Optional<R>, FC1> map) {
@@ -123,6 +90,133 @@ public final class BrainNodes {
                 }
             }
         };
+    }
+
+    public static <C, R, FC> BrainNode<C, R, FC> supplyIfAbsent(final BrainNode<C, Optional<R>, FC> main, final BrainNode<C, R, FC> fallback) {
+        return new BrainNode<>() {
+            @Override
+            public void init(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final var child = logger.open("supplied")) {
+                    try (final var log = child.open("main")) {
+                        main.init(context, log);
+                    }
+                    try (final var log = child.open("fallback")) {
+                        fallback.init(context, log);
+                    }
+                }
+            }
+
+            @Override
+            public R tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
+                try (final var child = logger.open("supplied")) {
+                    final Optional<R> tick = main.tick(context, arg, child);
+                    if (tick.isPresent()) {
+                        child.debug("Result present");
+                        return tick.get();
+                    }
+                    child.debug("Result absent, using fallback");
+                    return fallback.tick(context, arg, child);
+                }
+            }
+
+            @Override
+            public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final var child = logger.open("supplied")) {
+                    try (final var log = child.open("main")) {
+                        main.deinit(context, log);
+                    }
+                    try (final var log = child.open("fallback")) {
+                        fallback.deinit(context, log);
+                    }
+                }
+            }
+        };
+    }
+
+    public static <C, R, FC> BrainNode<C, Optional<R>, FC> or(final BrainNode<C, Optional<R>, FC> main, final BrainNode<C, Optional<R>, FC> fallback) {
+        return new BrainNode<>() {
+            @Override
+            public void init(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final var child = logger.open("or")) {
+                    try (final var log = child.open("main")) {
+                        main.init(context, log);
+                    }
+                    try (final var log = child.open("fallback")) {
+                        fallback.init(context, log);
+                    }
+                }
+            }
+
+            @Override
+            public Optional<R> tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
+                try (final var l = logger.open("or")) {
+                    final Optional<R> tick = main.tick(context, arg, l);
+                    if (tick.isPresent()) {
+                        l.debug("Result present");
+                        return tick;
+                    }
+                    l.debug("Result absent, using fallback");
+                    return fallback.tick(context, arg, logger);
+                }
+            }
+
+            @Override
+            public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final var child = logger.open("or")) {
+                    try (final var log = child.open("main")) {
+                        main.deinit(context, log);
+                    }
+                    try (final var log = child.open("fallback")) {
+                        fallback.deinit(context, log);
+                    }
+                }
+            }
+        };
+    }
+
+    public static <C, R, FC> BrainNode<C, R, FC> orElse(final BrainNode<C, Optional<R>, FC> main, final BrainNode<C, R, FC> fallback) {
+        return new BrainNode<>() {
+            @Override
+            public void init(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final var child = logger.open("orElse")) {
+                    try (final var log = child.open("main")) {
+                        main.init(context, log);
+                    }
+                    try (final var log = child.open("fallback")) {
+                        fallback.init(context, log);
+                    }
+                }
+            }
+
+            @Override
+            public R tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
+                try (final var l = logger.open("orElse")) {
+                    final Optional<R> tick = main.tick(context, arg, l);
+                    if (tick.isPresent()) {
+                        l.debug("Result present");
+                        return tick.get();
+                    }
+                    l.debug("Result absent, using fallback");
+                    return fallback.tick(context, arg, logger);
+                }
+            }
+
+            @Override
+            public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
+                try (final var child = logger.open("orElse")) {
+                    try (final var log = child.open("main")) {
+                        main.deinit(context, log);
+                    }
+                    try (final var log = child.open("fallback")) {
+                        fallback.deinit(context, log);
+                    }
+                }
+            }
+        };
+    }
+
+    public static <C, FC> BrainNode<C, FC, FC> forwardArg(final BrainNode<C, Unit, FC> node) {
+        return node.contextCapture((arg, ret) -> arg);
     }
 
     private BrainNodes() {

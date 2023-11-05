@@ -50,6 +50,13 @@ public class BasicAreaOfInterest implements AreaOfInterest, TickingAreaOfInteres
         return claimedBy;
     }
 
+    public boolean isClaimedBy(final UUID id) {
+        if (claimedBy.isPresent()) {
+            return claimedBy.get().equals(id);
+        }
+        return false;
+    }
+
     public long lastVisited() {
         return lastVisited;
     }

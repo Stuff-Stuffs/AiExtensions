@@ -127,4 +127,8 @@ public interface BrainNode<C, R, FC> {
     default <R0> BrainNode<C, R0, FC> contextCapture(final BiFunction<FC, R, R0> combiner) {
         return new ContextCapturingBrainNode<>(this, combiner);
     }
+
+    default <R0, FC0> BrainNode<C, R0, FC> secondary(final BrainNode<C, R0, FC0> secondary, final BiFunction<FC, R, FC0> combiner) {
+        return new SecondaryBrainNode<>(this, secondary, combiner);
+    }
 }

@@ -2,10 +2,7 @@ package io.github.stuff_stuffs.aiex.common.impl.brain.memory;
 
 import com.google.common.collect.AbstractIterator;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryName;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryReference;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryType;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.*;
 import it.unimi.dsi.fastutil.longs.*;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -17,18 +14,22 @@ import java.util.*;
 
 public class MemoriesImpl implements AiBrainView.Memories {
     private static final long INVALID_ID = Long.MIN_VALUE;
-    private final Object2LongMap<MemoryNameImpl<?>> idByName;
+    private final Object2LongMap<MemoryName<?>> idByName;
+    private final Long2ObjectMap<MemoryName<?>> nameById;
     private final Long2ObjectMap<MemoryImpl<?>> byId;
     private final Long2ObjectMap<LongSet> containedBy;
     private final Long2ObjectMap<LongSet> containing;
+    private final Long2ObjectLinkedOpenHashMap<TickingMemory> tickable;
     private long nextId = INVALID_ID + 1;
 
     public MemoriesImpl() {
         idByName = new Object2LongOpenHashMap<>();
         idByName.defaultReturnValue(INVALID_ID);
+        nameById = new Long2ObjectOpenHashMap<>();
         byId = new Long2ObjectOpenHashMap<>();
         containedBy = new Long2ObjectOpenHashMap<>();
         containing = new Long2ObjectOpenHashMap<>();
+        tickable = new Long2ObjectLinkedOpenHashMap<>();
     }
 
     @Override
@@ -77,7 +78,7 @@ public class MemoriesImpl implements AiBrainView.Memories {
     @Override
     public <T> MemoryReference<T> add(final MemoryType<T> type, final T value) {
         final long id = nextId++;
-        final MemoryImpl<T> memory = new MemoryImpl<>(type, value, id, this);
+        final MemoryImpl<T> memory = new MemoryImpl<>(type, value, id, this, m -> tickable.put(id, m), () -> tickable.remove(id));
         byId.put(id, memory);
         return memory.reference();
     }
@@ -86,10 +87,11 @@ public class MemoriesImpl implements AiBrainView.Memories {
     public <T> void put(final MemoryName<T> name, final T value) {
         long id = idByName.getLong(name);
         if (id == INVALID_ID) {
-            id = nextId++;
-            idByName.put((MemoryNameImpl<?>) name, id);
-            final MemoryImpl<T> memory = new MemoryImpl<>(name.type(), value, id, this);
-            byId.put(id, memory);
+            long curId = nextId++;
+            idByName.put(name, curId);
+            nameById.put(curId, name);
+            final MemoryImpl<T> memory = new MemoryImpl<>(name.type(), value, curId, this, m -> tickable.put(curId, m), () -> tickable.remove(curId));
+            byId.put(curId, memory);
         } else {
             final MemoryImpl<?> memory = byId.get(id);
             if (memory.type() != name.type()) {
@@ -144,6 +146,12 @@ public class MemoriesImpl implements AiBrainView.Memories {
         if (removed == null) {
             return false;
         }
+        final MemoryName<?> name = nameById.remove(id);
+        if (name != null) {
+            idByName.removeLong(name);
+        }
+        removed.forget();
+        containing.remove(id);
         final LongSet set = containedBy.remove(id);
         if (set == null || set.isEmpty()) {
             return true;
@@ -172,7 +180,7 @@ public class MemoriesImpl implements AiBrainView.Memories {
         return true;
     }
 
-    public <T> void change(final long id, final MemoryImpl<T> cursor, final T oldValue) {
+    public <T> void change(final long id, final MemoryImpl<T> cursor) {
         final LongSet set = containedBy.get(id);
         if (set == null || set.isEmpty()) {
             return;
@@ -184,7 +192,7 @@ public class MemoriesImpl implements AiBrainView.Memories {
             if (memory == null) {
                 throw new RuntimeException();
             }
-            changes.add(update(memory, cursor, oldValue));
+            changes.add(update(memory, cursor));
         }
         changeUpdateNetwork(cursor);
         for (final Runnable change : changes) {
@@ -192,12 +200,12 @@ public class MemoriesImpl implements AiBrainView.Memories {
         }
     }
 
-    private <T, K> Runnable update(final Memory<K> memory, final Memory<T> cursor, final T oldValue) {
+    private <T, K> Runnable update(final Memory<K> memory, final Memory<T> cursor) {
         return () -> {
             if (memory.forgotten()) {
                 return;
             }
-            final Optional<K> optional = memory.type().changeContained(cursor, oldValue, memory.get());
+            final Optional<K> optional = memory.type().changeContained(cursor, memory.get());
             if (optional.isEmpty()) {
                 forget(memory.reference());
             } else {
@@ -263,7 +271,7 @@ public class MemoriesImpl implements AiBrainView.Memories {
                 if (nbt.contains("name")) {
                     final Optional<MemoryName<?>> name = MemoryName.CODEC.parse(NbtOps.INSTANCE, nbt.get("name")).result();
                     if (name.isPresent()) {
-                        idByName.put((MemoryNameImpl<?>) name.get(), id);
+                        idByName.put(name.get(), id);
                     }
                 }
             } catch (final NumberFormatException ignored) {
@@ -287,13 +295,13 @@ public class MemoriesImpl implements AiBrainView.Memories {
 
     private <T> MemoryImpl<T> create(final MemoryType<T> type, final NbtElement element, final long id) {
         final T val = type.codec().parse(NbtOps.INSTANCE, element).result().orElseThrow(RuntimeException::new);
-        return new MemoryImpl<>(type, val, id, this);
+        return new MemoryImpl<>(type, val, id, this, m -> tickable.put(id, m), () -> tickable.remove(id));
     }
 
     public NbtCompound writeNbt() {
         final NbtCompound compound = new NbtCompound();
         final LongSet visited = new LongOpenHashSet();
-        for (final Object2LongMap.Entry<MemoryNameImpl<?>> entry : idByName.object2LongEntrySet()) {
+        for (final Object2LongMap.Entry<MemoryName<?>> entry : idByName.object2LongEntrySet()) {
             visited.add(entry.getLongValue());
             final MemoryImpl<?> memory = byId.get(entry.getLongValue());
             final NbtCompound wrapper = new NbtCompound();

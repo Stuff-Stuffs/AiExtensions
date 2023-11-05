@@ -9,12 +9,16 @@ import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestReference;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrain;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.BasicMemories;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.BasicBrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.LoadMemoryNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.NamedForgettingNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.NamedRememberingBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.target.BrainNodeTargets;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.SelectorBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.IfBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
@@ -55,70 +59,64 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
         super(entityType, world);
         navigator = new BasicNpcEntityPather(this);
         if (world instanceof ServerWorld) {
-            final BrainNode<TestEntity, Optional<AreaOfInterestReference<BasicAreaOfInterest>>, Unit> findHome = LoadMemoryNode.loadOrElse(
-                    AiExTestCommon.HOME_MEMORY_NAME,
-                    BrainNodeTargets.<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, Unit, BasicAreaOfInterest>areaTarget(
+            final BrainNode<TestEntity, Optional<AreaOfInterestReference<BasicAreaOfInterest>>, Unit> findHome = BrainNodes.or(
+                    new LoadMemoryNode<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, Unit>(AiExTestCommon.HOME_MEMORY_NAME).adaptResult(
+                            opt -> opt.map(
+                                    Memory::get
+                            )
+                    ),
+                    BrainNodeTargets.<TestEntity, BasicAreaOfInterest, Unit>findReachable(
+                            BasicMemories.BASIC_UNREACHABLE_AREA_NAME,
                             AiExTestCommon.BASIC_AOI_TYPE,
-                            (context, arg, events) -> events.filter(entry -> entry.value().claimedBy().isEmpty()).map(AreaOfInterestEntry::reference).findFirst(),
+                            (context, arg, entry) -> entry.value().isClaimedBy(context.entity().getUuid())
+                                    || entry.value().claimedBy().isEmpty(),
                             64,
                             true
-                    ).adaptResult(
-                            opt -> opt.orElse(null)
-                    )).adaptResult(Optional::ofNullable);
-            final NamedRememberingBrainNode<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, AreaOfInterestReference<BasicAreaOfInterest>> remembering = new NamedRememberingBrainNode<>(
+                    ).adaptResult(opt -> opt.map(AreaOfInterestEntry::reference))
+            );
+            final var remembering = new NamedRememberingBrainNode<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, AreaOfInterestReference<BasicAreaOfInterest>>(
                     AiExTestCommon.HOME_MEMORY_NAME,
                     (context, arg) -> arg
             );
-            final NamedForgettingNode<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, Unit> forgetting = new NamedForgettingNode<>(AiExTestCommon.HOME_MEMORY_NAME);
-            final IfBrainNode<TestEntity, Unit, Optional<AreaOfInterestReference<BasicAreaOfInterest>>> tryRemember = new IfBrainNode<>(
+            final var forgetting = new NamedForgettingNode<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, Unit>(AiExTestCommon.HOME_MEMORY_NAME);
+            final var tryRemember = new IfBrainNode<>(
                     remembering.<Optional<AreaOfInterestReference<BasicAreaOfInterest>>>adaptArg(
                             Optional::get
-                    ).adaptResult(
-                            res -> Unit.INSTANCE
-                    ), forgetting.adaptResult(
-                    res -> Unit.INSTANCE
-            ).adaptArg(
-                    res -> Unit.INSTANCE
-            ),
+                    ).discardResult(),
+                    forgetting.discardResult().adaptArg(opt -> Unit.INSTANCE),
                     (context, reference) -> reference.isPresent()
             );
-            final BrainNode<TestEntity, Optional<AreaOfInterestReference<BasicAreaOfInterest>>, Unit> findHomeAndRemember = findHome.chain(
+            final var findHomeAndRemember = findHome.chain(
                     tryRemember.contextCapture(
-                            (arg, ret) -> arg)
-            ).cache();
-            final BrainNode<TestEntity, Res, AreaOfInterestEntry<BasicAreaOfInterest>> walkToHomeAndClaim = BrainNodes.expectResult(
-                    new TaskBrainNode<>(
-                            BasicTasks.Walk.KEY,
-                            (BiFunction<AreaOfInterestEntry<BasicAreaOfInterest>, BrainContext<TestEntity>, BasicTasks.Walk.Parameters>) (reference, context) -> {
-                                final Vec3d center = Vec3d.ofBottomCenter(reference.bounds().center());
-                                return new BasicTasks.Walk.Parameters() {
-                                    @Override
-                                    public Vec3d target() {
-                                        return center;
-                                    }
-
-                                    @Override
-                                    public double maxError() {
-                                        return 2;
-                                    }
-                                };
-                            },
-                            (reference, context) -> null
-                    ),
-                    RuntimeException::new
-            ).contextCapture(Pair::of).ifThen(
-                    (context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.DONE,
-                    BrainNodes.terminal(
-                            (context, pair) -> pair.getFirst().value().visit(context.world(), context.entity()) ? Res.DONE : Res.RESET
-                    ),
-                    BrainNodes.constant(Res.RESET)
+                            (arg, ret) -> arg
+                    )
             );
-            final BrainNode<TestEntity, Res, Unit> node = findHomeAndRemember.adaptResult(
+            final var rememberUnreachable = BasicBrainNodes.<TestEntity>rememberUnreachable(BasicMemories.BASIC_UNREACHABLE_AREA_NAME);
+            final var dispatch = SelectorBrainNode.<TestEntity, Res, Pair<AreaOfInterestEntry<BasicAreaOfInterest>, BasicTasks.Walk.Result>>builder().add((context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.DONE, BrainNodes.terminal((context, pair) -> pair.getFirst().value().visit(context.world(), context.entity()) ? Res.DONE : Res.RESET)).add((context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.CANNOT_REACH, rememberUnreachable.adaptResult(unit -> Res.RESET).adaptArg(pair -> pair.getFirst().reference())).add((context, pair) -> true, BrainNodes.terminal((context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.CONTINUE ? Res.WALKING_TO : Res.RESET)).build();
+            final var walkToHomeAndClaim = TaskBrainNode.expectedTask(
+                    BasicTasks.Walk.KEY,
+                    (BiFunction<AreaOfInterestEntry<BasicAreaOfInterest>, BrainContext<TestEntity>, BasicTasks.Walk.Parameters>) (reference, context) -> {
+                        final Vec3d center = Vec3d.ofBottomCenter(reference.bounds().center());
+                        return new BasicTasks.Walk.Parameters() {
+                            @Override
+                            public Vec3d target() {
+                                return center;
+                            }
+
+                            @Override
+                            public double maxError() {
+                                return 2;
+                            }
+                        };
+                    },
+                    (reference, context) -> null
+            ).contextCapture(Pair::of).chain(dispatch);
+            final var node = findHomeAndRemember.adaptResult(
                     (context, reference) -> reference.flatMap(ref -> ((AiWorldExtensions) context.world()).aiex$getAoiWorld().get(ref))
             ).ifThen(
                     (context, reference) -> reference.isPresent(),
                     walkToHomeAndClaim.adaptArg(Optional::get),
-                    BrainNodes.constant(Res.WALKING_TO)
+                    BrainNodes.constant(Res.RESET)
             ).resetOnResult(
                     res -> res == Res.RESET
             );

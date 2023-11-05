@@ -9,6 +9,8 @@ import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventType;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryName;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.UnreachableAreaOfInterestSet;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.TypeFilter;
@@ -60,6 +62,21 @@ public final class BrainNodeTargets {
                 return extractor.extract(context, arg, ((AiWorldExtensions) context.world()).aiex$getAoiWorld().intersecting(bounds, type));
             }
         };
+    }
+
+    public static <C extends Entity, A extends AreaOfInterest, FC> BrainNode<C, Optional<AreaOfInterestEntry<A>>, FC> findReachable(final MemoryName<UnreachableAreaOfInterestSet> unreachableName, final AreaOfInterestType<A> type, final AreaFilter<C, A, FC> filter, final int radius, final boolean dynamic) {
+        return BrainNodeTargets.areaTarget(type, (context, arg, events) -> {
+            final var opt = context.brain().memories().get(unreachableName);
+            if (opt.isPresent()) {
+                final UnreachableAreaOfInterestSet memory = opt.get().get();
+                events = events.filter(entry -> !memory.contains(entry.reference()));
+            }
+            return events.filter(entry -> filter.test(context, arg, entry)).findAny();
+        }, radius, dynamic);
+    }
+
+    public interface AreaFilter<C, A extends AreaOfInterest, FC> {
+        boolean test(BrainContext<C> context, FC arg, AreaOfInterestEntry<A> entry);
     }
 
     public interface EntityFilter<C, E extends Entity, FC> {

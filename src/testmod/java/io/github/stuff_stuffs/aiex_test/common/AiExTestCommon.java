@@ -5,7 +5,7 @@ import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestBounds;
 import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestEntry;
 import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestReference;
 import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestType;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.BasicMemoryTypes;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.BasicMemories;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryName;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryType;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
@@ -53,7 +53,7 @@ public class AiExTestCommon implements ModInitializer {
             }
         }
     };
-    public static final MemoryType<AreaOfInterestReference<BasicAreaOfInterest>> BASIC_AOI_MEMORY_TYPE = BasicMemoryTypes.areaOfInterest(BASIC_AOI_TYPE);
+    public static final MemoryType<AreaOfInterestReference<BasicAreaOfInterest>> BASIC_AOI_MEMORY_TYPE = BasicMemories.areaOfInterest(BASIC_AOI_TYPE);
     public static final MemoryName<AreaOfInterestReference<BasicAreaOfInterest>> HOME_MEMORY_NAME = () -> BASIC_AOI_MEMORY_TYPE;
 
     @Override

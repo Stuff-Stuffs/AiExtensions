@@ -11,11 +11,13 @@ import net.minecraft.util.math.BlockPos;
 
 import java.util.*;
 
-public final class BasicMemoryTypes {
+public final class BasicMemories {
     public static final MemoryType<Integer> INT_MEMORY_TYPE = () -> Codec.INT;
     public static final MemoryType<BlockPos> BLOCK_POS_MEMORY_TYPE = () -> BlockPos.CODEC;
     public static final MemoryType<AreaOfInterestReference<?>> GENERIC_AREA_OF_INTEREST_MEMORY_TYPE = () -> AreaOfInterestReference.CODEC;
     public static final MemoryType<UUID> UUID_MEMORY_TYPE = () -> Uuids.STRING_CODEC;
+    public static final MemoryType<UnreachableAreaOfInterestSet> UNREACHABLE_AOI_MEMORY_TYPE = () -> UnreachableAreaOfInterestSet.CODEC;
+    public static final MemoryName<UnreachableAreaOfInterestSet> BASIC_UNREACHABLE_AREA_NAME = () -> UNREACHABLE_AOI_MEMORY_TYPE;
 
     public static <T extends AreaOfInterest> MemoryType<AreaOfInterestReference<T>> areaOfInterest(final AreaOfInterestType<T> type) {
         final Codec<AreaOfInterestReference<T>> codec = AreaOfInterestReference.typeSpecificCodec(type);
@@ -76,8 +78,10 @@ public final class BasicMemoryTypes {
         Registry.register(MemoryType.REGISTRY, AiExCommon.id("block_pos"), BLOCK_POS_MEMORY_TYPE);
         Registry.register(MemoryType.REGISTRY, AiExCommon.id("generic_aoi"), GENERIC_AREA_OF_INTEREST_MEMORY_TYPE);
         Registry.register(MemoryType.REGISTRY, AiExCommon.id("uuid"), UUID_MEMORY_TYPE);
+        Registry.register(MemoryType.REGISTRY, AiExCommon.id("unreachable_aoi"), UNREACHABLE_AOI_MEMORY_TYPE);
+        Registry.register(MemoryName.REGISTRY, AiExCommon.id("basic_unreachable"), BASIC_UNREACHABLE_AREA_NAME);
     }
 
-    private BasicMemoryTypes() {
+    private BasicMemories() {
     }
 }

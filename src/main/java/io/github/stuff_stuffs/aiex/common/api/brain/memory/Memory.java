@@ -14,4 +14,6 @@ public interface Memory<T> {
     Iterator<Memory<?>> containedIn();
 
     boolean forgotten();
+
+    void markDirty();
 }

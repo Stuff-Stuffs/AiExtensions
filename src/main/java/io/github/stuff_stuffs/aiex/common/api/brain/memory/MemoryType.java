@@ -25,7 +25,7 @@ public interface MemoryType<T> {
         return Optional.of(currentValue);
     }
 
-    default <K> Optional<T> changeContained(final Memory<K> other, final K oldValue, final T currentValue) {
+    default <K> Optional<T> changeContained(final Memory<K> other, final T currentValue) {
         return Optional.of(currentValue);
     }
 }

@@ -1,15 +1,12 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.basic;
 
 import com.mojang.datafixers.util.Either;
-import com.mojang.datafixers.util.Pair;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryName;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryReference;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.ForwardingBrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.IfBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.Optional;
@@ -42,13 +39,5 @@ public class LoadMemoryNode<C, R, FC> implements BrainNode<C, Optional<Memory<R>
     @Override
     public void deinit(final BrainContext<C> context, final SpannedLogger logger) {
 
-    }
-
-    public static <C, R, FC> BrainNode<C, R, FC> loadOrElse(final MemoryName<R> name, final BrainNode<C, R, FC> elseNode) {
-        return loadOrElse(arg -> Either.right(name), elseNode);
-    }
-
-    public static <C, R, FC> BrainNode<C, R, FC> loadOrElse(final Function<FC, Either<MemoryReference<R>, MemoryName<R>>> name, final BrainNode<C, R, FC> elseNode) {
-        return new LoadMemoryNode<C, R, FC>(name).fallthroughChain(new IfBrainNode<>(new ForwardingBrainNode<C, Pair<Optional<Memory<R>>, FC>>().adaptResult(pair -> pair.getFirst().get().get()), elseNode.adaptArg(Pair::getSecond), (context, arg) -> arg.getFirst().isPresent()), Pair::of);
     }
 }

@@ -1,9 +1,19 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.node.basic;
 
 import com.mojang.datafixers.util.Pair;
+import com.mojang.datafixers.util.Unit;
+import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterest;
+import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestEntry;
+import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestReference;
+import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestType;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryName;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.UnreachableAreaOfInterestSet;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.target.BrainNodeTargets;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.IfBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
@@ -11,6 +21,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.util.AiExFunctionUtil;
 import io.github.stuff_stuffs.aiex.common.api.util.InventorySlot;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.util.math.BlockPos;
@@ -67,6 +78,27 @@ public final class BasicBrainNodes {
                 return repository;
             }
         };
+    }
+
+    public static <C> BrainNode<C, Unit, AreaOfInterestReference<?>> rememberUnreachable(final MemoryName<UnreachableAreaOfInterestSet> name) {
+        return BrainNodes.orElse(
+                        new LoadMemoryNode<C, UnreachableAreaOfInterestSet, Unit>(name)
+                                .adaptResult(
+                                        res -> res.map(Memory::get)
+                                ),
+                        new NamedRememberingBrainNode<>(name,
+                                (context, unit) -> new UnreachableAreaOfInterestSet(context.brain().config().get(BrainConfig.DEFAULT_UNREACHABLE_TIMEOUT))
+                        )
+                )
+                .<AreaOfInterestReference<?>>adaptArg(ref -> Unit.INSTANCE)
+                .<Unit, Pair<AreaOfInterestReference<?>, UnreachableAreaOfInterestSet>>secondary(
+                        BrainNodes.terminal(
+                                (context, pair) -> {
+                                    pair.getSecond().tried(pair.getFirst(), context);
+                                    return Unit.INSTANCE;
+                                }
+                        ), Pair::of
+                );
     }
 
     public record MineParameters(BrainResourceRepository repository,

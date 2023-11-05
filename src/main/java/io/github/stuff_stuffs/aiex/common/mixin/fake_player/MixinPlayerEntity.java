@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(PlayerEntity.class)
 public class MixinPlayerEntity {
-    @Redirect(method = {"getBlockBreakingSpeed", "dropInventory", "getProjectileType"}, at = @At(value = "FIELD", target = "Lnet/minecraft/entity/player/PlayerEntity;inventory:Lnet/minecraft/entity/player/PlayerInventory;", opcode = Opcodes.GETFIELD))
+    @Redirect(method = {"getBlockBreakingSpeed", "dropInventory"}, at = @At(value = "FIELD", target = "Lnet/minecraft/entity/player/PlayerEntity;inventory:Lnet/minecraft/entity/player/PlayerInventory;", opcode = Opcodes.GETFIELD))
     private PlayerInventory hook(final PlayerEntity instance) {
         return instance.getInventory();
     }

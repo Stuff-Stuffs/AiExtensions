@@ -1,6 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.internal;
 
-import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import io.github.stuff_stuffs.aiex.common.api.AiWorldExtensions;
 import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestType;
 import io.github.stuff_stuffs.aiex.common.api.debug.AiExDebugFlags;
@@ -11,12 +11,10 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.command.argument.EnumArgumentType;
 import net.minecraft.command.argument.RegistryEntryArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.StringIdentifiable;
 
 import java.util.Collection;
 import java.util.Map;
@@ -75,43 +73,16 @@ public final class AiExCommands {
                 }
                 return 0;
             }));
-            final var debugEnable = CommandManager.argument("enable", EnabledArgumentType.TYPE).executes(context -> {
-                final Enabled enabled = EnabledArgumentType.get(context, "enable");
-                ENABLE_AOI_DEBUGGING = enabled == Enabled.TRUE;
+            final var debugEnable = CommandManager.argument("enable", BoolArgumentType.bool()).executes(context -> {
+                ENABLE_AOI_DEBUGGING = BoolArgumentType.getBool(context, "enable");
                 return 0;
             }).then(CommandManager.literal("clearData").executes(context -> {
-                final Enabled enabled = EnabledArgumentType.get(context, "enable");
-                ENABLE_AOI_DEBUGGING = enabled == Enabled.TRUE;
+                ENABLE_AOI_DEBUGGING = BoolArgumentType.getBool(context, "enable");
                 AOI_WATCHING.clear();
                 return 0;
             }));
             dispatcher.register(CommandManager.literal("aiexAoiDebug").requires(source -> source.hasPermissionLevel(2)).then(CommandManager.literal("watch").then(debugSet)).then(CommandManager.literal("enable").then(debugEnable)));
         });
-    }
-
-    private static final class EnabledArgumentType extends EnumArgumentType<Enabled> {
-        public static final EnabledArgumentType TYPE = new EnabledArgumentType();
-
-        public static Enabled get(final CommandContext<?> context, final String id) {
-            return context.getArgument(id, Enabled.class);
-        }
-
-        private EnabledArgumentType() {
-            super(StringIdentifiable.createCodec(Enabled::values), Enabled::values);
-        }
-    }
-
-    private enum Enabled implements StringIdentifiable {
-        TRUE,
-        FALSE;
-
-        @Override
-        public String asString() {
-            return switch (this) {
-                case TRUE -> "true";
-                case FALSE -> "false";
-            };
-        }
     }
 
     private AiExCommands() {

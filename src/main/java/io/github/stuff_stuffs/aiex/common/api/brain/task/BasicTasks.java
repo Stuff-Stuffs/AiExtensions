@@ -33,7 +33,11 @@ public final class BasicTasks {
             CONTINUE,
             DONE,
             CANNOT_REACH,
-            RESOURCE_ACQUISITION_ERROR
+            RESOURCE_ACQUISITION_ERROR;
+
+            public boolean ok() {
+                return this == CONTINUE || this == DONE;
+            }
         }
 
         public interface Parameters {
@@ -59,42 +63,6 @@ public final class BasicTasks {
         }
 
         private Walk() {
-        }
-    }
-
-    public static final class Attack {
-        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
-
-        public sealed interface Result {
-        }
-
-        public record ResourceAcquisitionError() implements Result {
-        }
-
-        public record EntityNotFoundFailure() implements Result {
-        }
-
-        public record EntityTooFarAway() implements Result {
-        }
-
-        public record GenericFailure(@Nullable Object context) implements Result {
-        }
-
-        public record CooldownWait(float progress) implements Result {
-        }
-
-        public record Success(float damageDone, boolean killed) implements Result {
-        }
-
-        public interface Parameters {
-            UUID target();
-
-            default double urgency() {
-                return 0.0;
-            }
-        }
-
-        private Attack() {
         }
     }
 
@@ -266,7 +234,6 @@ public final class BasicTasks {
     public static void init() {
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_walk"), Walk.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_walk"), Walk.DYNAMIC_KEY);
-        Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_attack"), Attack.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_look"), Look.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_look"), Look.DYNAMIC_KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_look_entity"), Look.ENTITY_KEY);

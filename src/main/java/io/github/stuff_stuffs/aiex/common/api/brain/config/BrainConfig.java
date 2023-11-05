@@ -24,6 +24,7 @@ public interface BrainConfig {
     }
 
     Key<Double> DEFAULT_REACH_DISTANCE = new Key<>(Double.class, 4.0);
+    Key<Long> DEFAULT_UNREACHABLE_TIMEOUT = new Key<>(Long.class, 40L);
 
     record Key<T>(Class<T> clazz, T defaultValue) {
         private static final Map<Identifier, Key<?>> FORWARD_REGISTRY = new Object2ReferenceOpenHashMap<>();
@@ -49,6 +50,7 @@ public interface BrainConfig {
 
         public static void init() {
             register(AiExCommon.id("default_reach_distance"), DEFAULT_REACH_DISTANCE);
+            register(AiExCommon.id("default_unreachable_timeout"), DEFAULT_UNREACHABLE_TIMEOUT);
         }
     }
 }
