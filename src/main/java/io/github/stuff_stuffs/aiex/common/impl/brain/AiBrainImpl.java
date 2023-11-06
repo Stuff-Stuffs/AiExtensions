@@ -11,7 +11,6 @@ import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
-import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiFakePlayer;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import io.github.stuff_stuffs.aiex.common.api.util.StringTemplate;
@@ -35,6 +34,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Events {
+    private static final StringTemplate MISSING_FACTORY_TEMPLATE = StringTemplate.create("Missing task factory for task {}!");
     private final T entity;
     private final BrainNode<T, Unit, Unit> rootNode;
     private final BrainConfig config;
@@ -110,10 +110,10 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             }
 
             @Override
-            public <TR, P, FC> Optional<BrainNode<T, TR, FC>> createTask(final TaskKey<TR, P, FC> key, final P parameters, SpannedLogger logger) {
+            public <TR, P, FC> Optional<BrainNode<T, TR, FC>> createTask(final TaskKey<TR, P, FC> key, final P parameters, final SpannedLogger logger) {
                 if (!taskConfig.hasFactory(key)) {
-                    try(var l = logger.open("BrainTaskFactory")) {
-                        l.warning("Missing task factory for task " + TaskKey.REGISTRY.getId(key).toUnderscoreSeparatedString() + "!");
+                    try (final var l = logger.open("BrainTaskFactory")) {
+                        l.warning(MISSING_FACTORY_TEMPLATE, TaskKey.REGISTRY.getId(key));
                     }
                     return Optional.empty();
                 }
@@ -161,14 +161,15 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
         }
         age++;
         handler.tick(age);
+        final BrainContext<T> context = createContext();
         try (final SpannedLogger child = logger.open("root")) {
-            final BrainContext<T> context = createContext();
             if (!init) {
                 rootNode.init(context, child);
                 init = true;
             }
             rootNode.tick(context, Unit.INSTANCE, child);
         }
+        memories.tick(context);
     }
 
     @Override

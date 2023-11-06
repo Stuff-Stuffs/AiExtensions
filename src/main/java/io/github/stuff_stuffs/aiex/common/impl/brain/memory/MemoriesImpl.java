@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.impl.brain.memory;
 
 import com.google.common.collect.AbstractIterator;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
+import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.*;
 import it.unimi.dsi.fastutil.longs.*;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
@@ -30,6 +31,12 @@ public class MemoriesImpl implements AiBrainView.Memories {
         containedBy = new Long2ObjectOpenHashMap<>();
         containing = new Long2ObjectOpenHashMap<>();
         tickable = new Long2ObjectLinkedOpenHashMap<>();
+    }
+
+    public void tick(final BrainContext<?> context) {
+        for (final TickingMemory value : tickable.values()) {
+            value.tick(context);
+        }
     }
 
     @Override
@@ -85,9 +92,9 @@ public class MemoriesImpl implements AiBrainView.Memories {
 
     @Override
     public <T> void put(final MemoryName<T> name, final T value) {
-        long id = idByName.getLong(name);
+        final long id = idByName.getLong(name);
         if (id == INVALID_ID) {
-            long curId = nextId++;
+            final long curId = nextId++;
             idByName.put(name, curId);
             nameById.put(curId, name);
             final MemoryImpl<T> memory = new MemoryImpl<>(name.type(), value, curId, this, m -> tickable.put(curId, m), () -> tickable.remove(curId));

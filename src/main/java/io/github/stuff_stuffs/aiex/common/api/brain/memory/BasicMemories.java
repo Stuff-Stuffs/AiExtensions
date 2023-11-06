@@ -24,7 +24,7 @@ public final class BasicMemories {
         return () -> codec;
     }
 
-    public static <T> MemoryType<MemoryReference<T>> erasingPointer(final MemoryType<T> type) {
+    public static <T> MemoryType<MemoryReference<T>> erasingReference(final MemoryType<T> type) {
         final Codec<MemoryReference<T>> codec = MemoryReference.codec(type);
         return new MemoryType<>() {
             @Override
@@ -39,7 +39,10 @@ public final class BasicMemories {
 
             @Override
             public Optional<MemoryReference<T>> forgetContained(final MemoryReference<?> other, final MemoryReference<T> currentValue) {
-                return Optional.empty();
+                if (currentValue.equals(other)) {
+                    return Optional.empty();
+                }
+                return Optional.of(currentValue);
             }
         };
     }
