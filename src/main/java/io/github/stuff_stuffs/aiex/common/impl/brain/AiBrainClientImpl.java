@@ -110,6 +110,11 @@ public class AiBrainClientImpl implements AiBrain {
             }
 
             @Override
+            public <T> Optional<MemoryName<T>> getName(final MemoryReference<T> reference) {
+                return Optional.empty();
+            }
+
+            @Override
             public <T> Optional<Memory<T>> get(final MemoryName<T> memory) {
                 return Optional.empty();
             }

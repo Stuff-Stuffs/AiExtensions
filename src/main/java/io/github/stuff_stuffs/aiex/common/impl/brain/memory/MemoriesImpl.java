@@ -55,6 +55,17 @@ public class MemoriesImpl implements AiBrainView.Memories {
     }
 
     @Override
+    public <T> Optional<MemoryName<T>> getName(final MemoryReference<T> reference) {
+        final MemoryReferenceImpl<?> casted = (MemoryReferenceImpl<?>) reference;
+        final MemoryName<?> name = nameById.get(casted.id());
+        if (name == null) {
+            return Optional.empty();
+        }
+        //noinspection unchecked
+        return Optional.of((MemoryName<T>) name);
+    }
+
+    @Override
     public <T> Optional<Memory<T>> get(final MemoryName<T> memory) {
         final long id = idByName.getLong(memory);
         if (id == INVALID_ID) {

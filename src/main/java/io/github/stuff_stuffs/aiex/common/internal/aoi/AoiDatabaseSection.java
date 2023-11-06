@@ -44,11 +44,14 @@ public class AoiDatabaseSection {
         if (l > size) {
             throw new IndexOutOfBoundsException();
         }
-        dirty = true;
         if (l == size) {
             data.add(pos);
+            dirty = true;
         } else {
-            data.set((int) id, pos);
+            final AoiSectionPos old = data.set((int) id, pos);
+            if (!pos.equals(old)) {
+                dirty = true;
+            }
         }
     }
 

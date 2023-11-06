@@ -59,6 +59,8 @@ public interface AiBrainView {
 
         boolean has(MemoryReference<?> reference);
 
+        <T> Optional<MemoryName<T>> getName(MemoryReference<T> reference);
+
         <T> Optional<Memory<T>> get(MemoryName<T> memory);
 
         <T> Optional<Memory<T>> get(MemoryReference<T> memory);
