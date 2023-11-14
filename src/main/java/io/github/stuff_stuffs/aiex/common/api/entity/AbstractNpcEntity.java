@@ -1,7 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.entity;
 
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
-import io.github.stuff_stuffs.aiex.common.api.AiExGameRules;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrain;
 import io.github.stuff_stuffs.aiex.common.api.entity.inventory.BasicNpcInventory;
 import io.github.stuff_stuffs.aiex.common.api.entity.inventory.NpcInventory;
@@ -140,8 +139,8 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
                 pather.tick();
             }
             if (this instanceof PathingNpcEntity pathing) {
-                final boolean priority = age % pathing.priorityPathingPollRate() == 0;
-                final boolean normal = age % pathing.pathingPollRate() == 0;
+                final boolean priority = world.getTime() % pathing.priorityPathingPollRate() == 0;
+                final boolean normal = world.getTime() % pathing.pathingPollRate() == 0;
                 if (priority | normal) {
                     final ChunkPos pos = getChunkPos();
                     final int rad;
@@ -198,7 +197,7 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
     }
 
     protected NpcHungerManager createHungerManager(final World world) {
-        return new BasicNpcHungerManager(world.getGameRules().get(AiExGameRules.NPC_DIFFICULTY).get(), 20);
+        return new BasicNpcHungerManager(Difficulty.NORMAL/*world.getGameRules().get(AiExGameRules.NPC_DIFFICULTY).get()*/, 20);
     }
 
     public boolean canFoodHeal() {
@@ -268,7 +267,7 @@ public abstract class AbstractNpcEntity extends AbstractAiMobEntity {
                 }
             }
 
-            final boolean canStarve = entity.getWorld().getGameRules().getBoolean(AiExGameRules.NPC_STARVATION);
+            final boolean canStarve = false;//entity.getWorld().getGameRules().getBoolean(AiExGameRules.NPC_STARVATION);
             if (canStarve && saturationLevel > 0.0F && entity.canFoodHeal() && foodLevel >= 20) {
                 ++foodTickTimer;
                 if (foodTickTimer >= 10) {

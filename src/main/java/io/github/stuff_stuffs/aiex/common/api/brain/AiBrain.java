@@ -19,6 +19,8 @@ public interface AiBrain extends AiBrainView {
 
     void tick();
 
+    void unload();
+
     void writeNbt(NbtCompound nbt);
 
     void readNbt(NbtCompound nbt);

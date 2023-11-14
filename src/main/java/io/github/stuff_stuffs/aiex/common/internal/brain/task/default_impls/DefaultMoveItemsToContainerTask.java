@@ -34,16 +34,16 @@ import java.lang.ref.WeakReference;
 import java.util.Optional;
 
 @SuppressWarnings("UnstableApiUsage")
-public class DefaultMoveItemsToContainerTask<T extends Entity> implements BrainNode<T, BasicTasks.MoveItemsToContainerTask.Result, BrainResourceRepository> {
+public class DefaultMoveItemsToContainerTask<T extends Entity> implements BrainNode<T, BasicTasks.MoveItemsToContainer.Result, BrainResourceRepository> {
     private final BlockPos target;
-    private final BasicTasks.MoveItemsToContainerTask.Filter filter;
+    private final BasicTasks.MoveItemsToContainer.Filter filter;
     private final @Nullable Direction side;
     private final int frequency;
     private Object2LongMap<ItemVariant> moved;
     private Object2LongMap<ItemVariant> movedView;
     private long cooldown;
 
-    public DefaultMoveItemsToContainerTask(final BlockPos target, final BasicTasks.MoveItemsToContainerTask.Filter filter, @Nullable final Direction side, final int frequency) {
+    public DefaultMoveItemsToContainerTask(final BlockPos target, final BasicTasks.MoveItemsToContainer.Filter filter, @Nullable final Direction side, final int frequency) {
         this.target = target;
         this.filter = filter;
         this.side = side;
@@ -58,9 +58,9 @@ public class DefaultMoveItemsToContainerTask<T extends Entity> implements BrainN
     }
 
     @Override
-    public BasicTasks.MoveItemsToContainerTask.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, final SpannedLogger logger) {
+    public BasicTasks.MoveItemsToContainer.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, final SpannedLogger logger) {
         if (--cooldown > 0) {
-            return new BasicTasks.MoveItemsToContainerTask.Continue(movedView);
+            return new BasicTasks.MoveItemsToContainer.Continue(movedView);
         }
         final Vec3d pos = context.entity().getEyePos();
         final double reachDistance = context.brain().config().get(BrainConfig.DEFAULT_REACH_DISTANCE);
@@ -68,16 +68,16 @@ public class DefaultMoveItemsToContainerTask<T extends Entity> implements BrainN
         final Optional<Vec3d> closest = shape.getClosestPointTo(pos.subtract(target.getX(), target.getY(), target.getZ()));
         if (closest.isEmpty()) {
             close(context);
-            return new BasicTasks.MoveItemsToContainerTask.Error(BasicTasks.MoveItemsToContainerTask.ErrorType.MISSING_CONTAINER, movedView);
+            return new BasicTasks.MoveItemsToContainer.Error(BasicTasks.MoveItemsToContainer.ErrorType.MISSING_CONTAINER, movedView);
         }
         if (closest.get().add(target.getX(), target.getY(), target.getZ()).squaredDistanceTo(pos) > reachDistance * reachDistance) {
             close(context);
-            return new BasicTasks.MoveItemsToContainerTask.Error(BasicTasks.MoveItemsToContainerTask.ErrorType.CANNOT_REACH, movedView);
+            return new BasicTasks.MoveItemsToContainer.Error(BasicTasks.MoveItemsToContainer.ErrorType.CANNOT_REACH, movedView);
         }
         final Storage<ItemVariant> storage = ItemStorage.SIDED.find(context.world(), target, side);
         if ((!(storage instanceof SlottedStorage<ItemVariant> slottedStorage))) {
             close(context);
-            return new BasicTasks.MoveItemsToContainerTask.Error(BasicTasks.MoveItemsToContainerTask.ErrorType.MISSING_CONTAINER, movedView);
+            return new BasicTasks.MoveItemsToContainer.Error(BasicTasks.MoveItemsToContainer.ErrorType.MISSING_CONTAINER, movedView);
         }
         final NpcInventory inventory = AiExApi.NPC_INVENTORY.find(context.entity(), null);
         if (inventory == null) {
@@ -87,22 +87,22 @@ public class DefaultMoveItemsToContainerTask<T extends Entity> implements BrainN
         for (final EquipmentSlot equipmentSlot : EquipmentSlot.values()) {
             final SingleSlotStorage<ItemVariant> slot = inventory.equipment().getSlot(equipmentSlot.getArmorStandSlotId());
             if (move(context, slot, BrainResource.ofEquipmentSlot(equipmentSlot), new InventorySlot(equipmentSlot), slottedStorage)) {
-                return new BasicTasks.MoveItemsToContainerTask.Continue(movedView);
+                return new BasicTasks.MoveItemsToContainer.Continue(movedView);
             }
         }
         final int count = inventory.main().getSlotCount();
         for (int i = 0; i < count; i++) {
             final SingleSlotStorage<ItemVariant> slot = inventory.main().getSlot(i);
             if (move(context, slot, BrainResource.ofInventorySlot(i), new InventorySlot(i), slottedStorage)) {
-                return new BasicTasks.MoveItemsToContainerTask.Continue(movedView);
+                return new BasicTasks.MoveItemsToContainer.Continue(movedView);
             }
         }
-        return new BasicTasks.MoveItemsToContainerTask.Success(movedView);
+        return new BasicTasks.MoveItemsToContainer.Success(movedView);
     }
 
     private boolean move(final BrainContext<T> context, final SingleSlotStorage<ItemVariant> slot, final BrainResource brainResource, final InventorySlot inventorySlot, final SlottedStorage<ItemVariant> out) {
         final ItemVariant resource = slot.getResource();
-        final BasicTasks.MoveItemsToContainerTask.Amount filtered = filter.filter(context, resource, slot.getAmount(), inventorySlot, out);
+        final BasicTasks.MoveItemsToContainer.Amount filtered = filter.filter(context, resource, slot.getAmount(), inventorySlot, out);
         if (filtered.amount() > 0) {
             final BrainResources.Token token = context.brain().resources().get(brainResource).orElse(null);
             if (token == null) {

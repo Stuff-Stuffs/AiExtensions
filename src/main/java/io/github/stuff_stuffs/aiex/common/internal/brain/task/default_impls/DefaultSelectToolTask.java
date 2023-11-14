@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 @SuppressWarnings("UnstableApiUsage")
-public class DefaultSelectToolTask<T extends Entity> implements BrainNode<T, BasicTasks.SelectToolTask.Result, BrainResourceRepository> {
+public class DefaultSelectToolTask<T extends Entity> implements BrainNode<T, BasicTasks.SelectTool.Result, BrainResourceRepository> {
     private final BlockState state;
     private final double increaseBlockDropWeight;
 
@@ -41,7 +41,7 @@ public class DefaultSelectToolTask<T extends Entity> implements BrainNode<T, Bas
     }
 
     @Override
-    public BasicTasks.SelectToolTask.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, final SpannedLogger logger) {
+    public BasicTasks.SelectTool.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, final SpannedLogger logger) {
         final NpcInventory inventory = AiExApi.NPC_INVENTORY.find(context.entity(), null);
         if (inventory == null) {
             throw new IllegalStateException();
@@ -80,14 +80,14 @@ public class DefaultSelectToolTask<T extends Entity> implements BrainNode<T, Bas
             }
         }
         if (pairs.isEmpty()) {
-            return new BasicTasks.SelectToolTask.NoneAvailableError();
+            return new BasicTasks.SelectTool.NoneAvailableError();
         }
         pairs.sort(ScoreValuePair.COMPARATOR);
         final List<InventorySlot> slots = new ArrayList<>(pairs.size());
         for (final ScoreValuePair pair : pairs) {
             slots.add(pair.value);
         }
-        return new BasicTasks.SelectToolTask.Success(slots);
+        return new BasicTasks.SelectTool.Success(slots);
     }
 
     private record ScoreValuePair(double score, InventorySlot value) {

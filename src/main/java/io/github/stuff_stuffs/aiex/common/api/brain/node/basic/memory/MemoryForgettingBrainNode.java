@@ -1,23 +1,24 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.node.basic;
+package io.github.stuff_stuffs.aiex.common.api.brain.node.basic.memory;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
-import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryName;
+import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryReference;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
-public class NamedForgettingNode<C, M, FC> implements BrainNode<C, Optional<M>, FC> {
-    private final BiFunction<BrainContext<C>, FC, MemoryName<M>> nameExtractor;
+public class MemoryForgettingBrainNode<C, M, FC> implements BrainNode<C, Optional<M>, FC> {
+    private final BiFunction<BrainContext<C>, FC, MemoryReference<M>> memoryExtractor;
 
-    public NamedForgettingNode(final MemoryName<M> name) {
-        this((context, arg) -> name);
+    public MemoryForgettingBrainNode(final Function<FC, MemoryReference<M>> extractor) {
+        this((context, arg) -> extractor.apply(arg));
     }
 
-    public NamedForgettingNode(final BiFunction<BrainContext<C>, FC, MemoryName<M>> extractor) {
-        nameExtractor = extractor;
+    public MemoryForgettingBrainNode(final BiFunction<BrainContext<C>, FC, MemoryReference<M>> extractor) {
+        memoryExtractor = extractor;
     }
 
     @Override
@@ -27,7 +28,7 @@ public class NamedForgettingNode<C, M, FC> implements BrainNode<C, Optional<M>, 
 
     @Override
     public Optional<M> tick(final BrainContext<C> context, final FC arg, final SpannedLogger logger) {
-        final MemoryName<M> name = nameExtractor.apply(context, arg);
+        final MemoryReference<M> name = memoryExtractor.apply(context, arg);
         final Optional<Memory<M>> memory = context.brain().memories().get(name);
         if (memory.isEmpty()) {
             return Optional.empty();

@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.Collection;
 
 @Mixin(EntityTrackingSection.class)
-public class EntityTrackingSectionMixin<T extends EntityLike> {
+public class MixinEntityTrackingSection<T extends EntityLike> {
     @Shadow
     @Final
     private TypeFilterableList<T> collection;
@@ -30,7 +30,7 @@ public class EntityTrackingSectionMixin<T extends EntityLike> {
             at = @At("RETURN"),
             cancellable = true
     )
-    private <U extends T> void removeDelegateHook(final TypeFilter<T, U> type, final Box box, final LazyIterationConsumer<? super U> consumer, final CallbackInfoReturnable<LazyIterationConsumer.NextIteration> cir) {
+    private <U extends T> void delegateHook(final TypeFilter<T, U> type, final Box box, final LazyIterationConsumer<? super U> consumer, final CallbackInfoReturnable<LazyIterationConsumer.NextIteration> cir) {
         final LazyIterationConsumer.NextIteration iteration = cir.getReturnValue();
         if (iteration == LazyIterationConsumer.NextIteration.CONTINUE && type.getBaseClass() == PlayerEntity.class) {
             final Collection<AiEntity> all = collection.getAllOfType(AiEntity.class);

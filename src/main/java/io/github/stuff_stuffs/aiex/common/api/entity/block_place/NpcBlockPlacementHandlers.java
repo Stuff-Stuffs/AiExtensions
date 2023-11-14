@@ -27,8 +27,8 @@ import java.util.function.Predicate;
 public final class NpcBlockPlacementHandlers {
     public static final Event<CollectionEvent> EVENT = EventFactory.createArrayBacked(CollectionEvent.class, events -> new CollectionEvent() {
         @Override
-        public <T> Collection<NpcBlockPlacementHandler<? super T>> find(final Class<T> clazz) {
-            final List<NpcBlockPlacementHandler<? super T>> list = new ArrayList<>();
+        public <T> Collection<NpcBlockPlacementHandler<T>> find(final Class<T> clazz) {
+            final List<NpcBlockPlacementHandler<T>> list = new ArrayList<>();
             for (final CollectionEvent event : events) {
                 list.addAll(event.find(clazz));
             }
@@ -43,7 +43,7 @@ public final class NpcBlockPlacementHandlers {
         AfterRegistryFreezeEvent.EVENT.register(() -> registryFrozen = true);
         EVENT.register(new CollectionEvent() {
             @Override
-            public <T> Collection<NpcBlockPlacementHandler<? super T>> find(final Class<T> clazz) {
+            public <T> Collection<NpcBlockPlacementHandler<T>> find(final Class<T> clazz) {
                 if (LivingEntity.class.isAssignableFrom(clazz)) {
                     final Set<Item> singleState = new ReferenceOpenHashSet<>();
                     final Set<Item> pillars = new ReferenceOpenHashSet<>();
@@ -71,7 +71,7 @@ public final class NpcBlockPlacementHandlers {
         if (!registryFrozen) {
             return new NpcBlockPlacementHandler<>() {
                 @Override
-                public boolean handle(final Item item, final BrainContext<? extends T> context, final BlockPos pos, final Predicate<BlockState> targetState) {
+                public boolean handle(final Item item, final BrainContext<T> context, final BlockPos pos, final Predicate<BlockState> targetState) {
                     return false;
                 }
 
@@ -86,21 +86,21 @@ public final class NpcBlockPlacementHandlers {
     }
 
     private static <T> NpcBlockPlacementHandler<?> compute(final Class<T> c) {
-        final Collection<NpcBlockPlacementHandler<? super T>> handlers = EVENT.invoker().find(c);
-        final Map<Item, List<NpcBlockPlacementHandler<? super T>>> map = new Reference2ReferenceOpenHashMap<>();
-        for (final NpcBlockPlacementHandler<? super T> handler : handlers) {
+        final Collection<NpcBlockPlacementHandler<T>> handlers = EVENT.invoker().find(c);
+        final Map<Item, List<NpcBlockPlacementHandler<T>>> map = new Reference2ReferenceOpenHashMap<>();
+        for (final NpcBlockPlacementHandler<T> handler : handlers) {
             for (final Item item : handler.handles()) {
                 map.computeIfAbsent(item, i -> new ArrayList<>()).add(handler);
             }
         }
-        for (final List<NpcBlockPlacementHandler<? super T>> value : map.values()) {
+        for (final List<NpcBlockPlacementHandler<T>> value : map.values()) {
             Collections.reverse(value);
         }
         return new NpcBlockPlacementHandler<T>() {
             @Override
-            public boolean handle(final Item item, final BrainContext<? extends T> context, final BlockPos pos, final Predicate<BlockState> targetState) {
-                final List<NpcBlockPlacementHandler<? super T>> list = map.get(item);
-                for (final NpcBlockPlacementHandler<? super T> handler : list) {
+            public boolean handle(final Item item, final BrainContext<T> context, final BlockPos pos, final Predicate<BlockState> targetState) {
+                final List<NpcBlockPlacementHandler<T>> list = map.get(item);
+                for (final NpcBlockPlacementHandler<T> handler : list) {
                     final boolean result = handler.handle(item, context, pos, targetState);
                     if (result) {
                         return true;
@@ -117,7 +117,7 @@ public final class NpcBlockPlacementHandlers {
     }
 
     public interface CollectionEvent {
-        <T> Collection<NpcBlockPlacementHandler<? super T>> find(Class<T> clazz);
+        <T> Collection<NpcBlockPlacementHandler<T>> find(Class<T> clazz);
     }
 
     private NpcBlockPlacementHandlers() {

@@ -27,7 +27,7 @@ public enum BasicPathingUniverse {
     FLOOR(true, false, 1.0),
     WATER(true, true, 6.0),
     LAVA(true, true, 128),
-    DANGER(false, true, 24),
+    DANGER(false, true, 128),
     DANGER_FLOOR(true, false, 24),
     PATH(true, false, 0.2),
     OPENABLE_DOOR(true, false, 2.0),
@@ -151,12 +151,12 @@ public enum BasicPathingUniverse {
             if (y > 16 | y < -1) {
                 return false;
             }
-            final Block oldBlock = oldState.getBlock();
-            final Block newBlock = newState.getBlock();
-            if (Flag.DOOR.set.isIn(oldBlock) && Flag.DOOR.set.isIn(newBlock)) {
-                return false;
-            }
             if ((-1 <= x & x <= 16) && (-1 <= z & z <= 16)) {
+                final Block oldBlock = oldState.getBlock();
+                final Block newBlock = newState.getBlock();
+                if (Flag.DOOR.set.isIn(oldBlock) && Flag.DOOR.set.isIn(newBlock)) {
+                    return false;
+                }
                 if (oldBlock == newBlock) {
                     final BlockPos.Mutable set = scratch.set(x + chunkSectionX * 16, y + chunkSectionY * 16, z + chunkSectionZ * 16);
                     final VoxelShape oldShape = oldState.getCollisionShape(cache, set);

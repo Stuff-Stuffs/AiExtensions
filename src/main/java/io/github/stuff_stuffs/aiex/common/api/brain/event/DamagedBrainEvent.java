@@ -51,6 +51,18 @@ public class DamagedBrainEvent implements AiBrainEvent {
         return source;
     }
 
+    public Optional<UUID> attackerOrSource() {
+        return attacker.or(this::sourceUuid);
+    }
+
+    public @Nullable EntityReference attackerOrSource(final AiWorldExtensions extensions) {
+        final EntityReference attacker = attacker(extensions);
+        if (attacker != null) {
+            return attacker;
+        }
+        return source(extensions);
+    }
+
     public @Nullable EntityReference attacker(final AiWorldExtensions extensions) {
         return attacker.map(extensions::aiex$getEntityReference).orElse(null);
     }

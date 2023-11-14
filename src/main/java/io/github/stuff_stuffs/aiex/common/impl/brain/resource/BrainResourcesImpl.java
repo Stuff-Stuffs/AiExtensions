@@ -2,41 +2,57 @@ package io.github.stuff_stuffs.aiex.common.impl.brain.resource;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ReferenceMap;
+import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenHashMap;
+import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
 public class BrainResourcesImpl extends AbstractBrainResourcesImpl implements BrainResources {
-    private final Object2IntOpenHashMap<BrainResource> resourceCounts = new Object2IntOpenHashMap<>();
+    private final Object2ReferenceMap<Identifier, ResourceTokenEntry> map = new Object2ReferenceOpenHashMap<>();
 
     @Override
     public Optional<Token> get(final BrainResource resource) {
-        if (resource.maxTicketCount() < 1) {
-            return Optional.empty();
+        final ResourceTokenEntry entry = map.get(resource.id());
+        final BrainResource.Priority priority = resource.priority();
+        if (entry == null || (priority == BrainResource.Priority.ACTIVE && entry.active == null) || (priority == BrainResource.Priority.PASSIVE && entry.passive == null)) {
+            final TokenImpl token = new TokenImpl(resource, null);
+            final ResourceTokenEntry newEntry;
+            if (entry == null) {
+                newEntry = new ResourceTokenEntry(priority == BrainResource.Priority.ACTIVE ? token : null, priority == BrainResource.Priority.PASSIVE ? token : null);
+            } else {
+                newEntry = entry.with(token, priority);
+            }
+            if (priority == BrainResource.Priority.ACTIVE && newEntry.passive != null) {
+                newEntry.passive.active = false;
+            }
+            map.put(resource.id(), newEntry);
+            return Optional.of(token);
         }
-        final int tickets = resourceCounts.computeIfAbsent(resource, BrainResource::maxTicketCount);
-        if (tickets == 0) {
-            resourceCounts.removeInt(resource);
-            return Optional.empty();
-        }
-        resourceCounts.addTo(resource, -1);
-        return Optional.of(new TokenImpl(resource, null));
+        return Optional.empty();
     }
 
     @Override
     public void release(final Token token) {
-        if (token.active()) {
-            final TokenImpl casted = ((TokenImpl) token);
-            casted.active = false;
-            if (casted.parent != null) {
-                if (casted.parent.activeChild == casted) {
-                    casted.parent.activeChild = null;
-                }
-            } else {
-                final int i = resourceCounts.addTo(token.resource(), 1);
-                if (i + 1 == token.resource().maxTicketCount()) {
-                    resourceCounts.removeInt(token.resource());
+        final TokenImpl casted = ((TokenImpl) token);
+        casted.active = false;
+        if (casted.parent != null) {
+            if (casted.parent.activeChild == casted) {
+                casted.parent.activeChild = null;
+            }
+        } else {
+            final Identifier id = token.resource().id();
+            final ResourceTokenEntry entry = map.get(id);
+            if (entry != null) {
+                if (entry.hasOther(casted.resource.priority())) {
+                    final ResourceTokenEntry newEntry = entry.with(null, casted.resource.priority());
+                    if (casted.resource.priority() == BrainResource.Priority.ACTIVE) {
+                        newEntry.passive.active = true;
+                    }
+                    map.put(id, newEntry);
+                } else {
+                    map.remove(id);
                 }
             }
         }
@@ -44,7 +60,15 @@ public class BrainResourcesImpl extends AbstractBrainResourcesImpl implements Br
 
     @Override
     public void clear() {
-        resourceCounts.clear();
+        for (final ResourceTokenEntry value : map.values()) {
+            if (value.active != null) {
+                value.active.active = false;
+            }
+            if (value.passive != null) {
+                value.passive.active = false;
+            }
+        }
+        map.clear();
     }
 
     @Override
@@ -77,7 +101,30 @@ public class BrainResourcesImpl extends AbstractBrainResourcesImpl implements Br
 
         @Override
         public boolean active() {
-            return active && (parent == null || parent.active());
+            return active && (parent == null || (parent.activeChild == this && parent.active()));
+        }
+    }
+
+    private record ResourceTokenEntry(@Nullable TokenImpl active, @Nullable TokenImpl passive) {
+        public boolean hasOther(final BrainResource.Priority priority) {
+            return switch (priority) {
+                case ACTIVE -> passive != null;
+                case PASSIVE -> active != null;
+            };
+        }
+
+        public boolean has(final BrainResource.Priority priority) {
+            return switch (priority) {
+                case ACTIVE -> active != null;
+                case PASSIVE -> passive != null;
+            };
+        }
+
+        public ResourceTokenEntry with(final TokenImpl token, final BrainResource.Priority priority) {
+            return switch (priority) {
+                case ACTIVE -> new ResourceTokenEntry(token, passive);
+                case PASSIVE -> new ResourceTokenEntry(active, token);
+            };
         }
     }
 }

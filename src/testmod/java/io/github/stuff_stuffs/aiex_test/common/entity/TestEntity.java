@@ -14,18 +14,19 @@ import io.github.stuff_stuffs.aiex.common.api.brain.memory.Memory;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.BasicBrainNodes;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.LoadMemoryNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.NamedForgettingNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.NamedRememberingBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.memory.NamedForgettingBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.memory.NamedMemoryLoadBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.memory.NamedRememberingBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.basic.target.BrainNodeTargets;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.SelectorBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.IfBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.SelectorBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.entity.AbstractNpcEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicNpcEntityPather;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.BasicPathingUniverse;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.PathingNpcEntity;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import io.github.stuff_stuffs.aiex.common.internal.entity.DelegatingPlayerInventory;
@@ -60,7 +61,7 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
         navigator = new BasicNpcEntityPather(this);
         if (world instanceof ServerWorld) {
             final BrainNode<TestEntity, Optional<AreaOfInterestReference<BasicAreaOfInterest>>, Unit> findHome = BrainNodes.or(
-                    new LoadMemoryNode<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, Unit>(AiExTestCommon.HOME_MEMORY_NAME).adaptResult(
+                    new NamedMemoryLoadBrainNode<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, Unit>(AiExTestCommon.HOME_MEMORY_NAME).adaptResult(
                             opt -> opt.map(
                                     Memory::get
                             )
@@ -78,7 +79,7 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
                     AiExTestCommon.HOME_MEMORY_NAME,
                     (context, arg) -> arg
             );
-            final var forgetting = new NamedForgettingNode<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, Unit>(AiExTestCommon.HOME_MEMORY_NAME);
+            final var forgetting = new NamedForgettingBrainNode<TestEntity, AreaOfInterestReference<BasicAreaOfInterest>, Unit>(AiExTestCommon.HOME_MEMORY_NAME);
             final var tryRemember = new IfBrainNode<>(
                     remembering.<Optional<AreaOfInterestReference<BasicAreaOfInterest>>>adaptArg(
                             Optional::get
@@ -92,15 +93,26 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
                     )
             );
             final var rememberUnreachable = BasicBrainNodes.<TestEntity>rememberUnreachable(BasicMemories.BASIC_UNREACHABLE_AREA_NAME);
-            final var dispatch = SelectorBrainNode.<TestEntity, Res, Pair<AreaOfInterestEntry<BasicAreaOfInterest>, BasicTasks.Walk.Result>>builder().add((context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.DONE, BrainNodes.terminal((context, pair) -> pair.getFirst().value().visit(context.world(), context.entity()) ? Res.DONE : Res.RESET)).add((context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.CANNOT_REACH, rememberUnreachable.adaptResult(unit -> Res.RESET).adaptArg(pair -> pair.getFirst().reference())).add((context, pair) -> true, BrainNodes.terminal((context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.CONTINUE ? Res.WALKING_TO : Res.RESET)).build();
+            final var dispatch = SelectorBrainNode.<TestEntity, Res, Pair<AreaOfInterestEntry<BasicAreaOfInterest>, BasicTasks.Walk.Result>>builder().add(
+                    (context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.DONE,
+                    BrainNodes.terminal(
+                            (context, pair) -> pair.getFirst().value().visit(context.world(), context.entity()) ? Res.DONE : Res.RESET
+                    )
+            ).add(
+                    (context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.CANNOT_REACH,
+                    rememberUnreachable.adaptResult(unit -> Res.RESET).adaptArg(pair -> pair.getFirst().reference())
+            ).add(
+                    (context, pair) -> true,
+                    BrainNodes.terminal((context, pair) -> pair.getSecond() == BasicTasks.Walk.Result.CONTINUE ? Res.WALKING_TO : Res.RESET)
+            ).build();
             final var walkToHomeAndClaim = TaskBrainNode.expectedTask(
                     BasicTasks.Walk.KEY,
                     (BiFunction<AreaOfInterestEntry<BasicAreaOfInterest>, BrainContext<TestEntity>, BasicTasks.Walk.Parameters>) (reference, context) -> {
                         final Vec3d center = Vec3d.ofBottomCenter(reference.bounds().center());
                         return new BasicTasks.Walk.Parameters() {
                             @Override
-                            public Vec3d target() {
-                                return center;
+                            public EntityPather.Target target() {
+                                return new EntityPather.SingleTarget(center);
                             }
 
                             @Override

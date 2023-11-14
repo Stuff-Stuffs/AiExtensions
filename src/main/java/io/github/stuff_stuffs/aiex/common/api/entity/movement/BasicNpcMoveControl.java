@@ -140,27 +140,18 @@ public class BasicNpcMoveControl implements NpcMoveControl {
     }
 
     protected void closeDoor(final NpcMovementNode.OpenDoor door) {
-        final World world = entity.getEntityWorld();
-        final BlockPos pos = BlockPos.ofFloored(door.doorX(), door.doorY(), door.doorZ());
-        final Direction direction = door.direction();
-        final BlockState state = world.getBlockState(pos);
-        if (DoorUtil.canPassThroughDoor(state, direction) && entity.aiex$getBrain().hasFakePlayerDelegate()) {
-            final BlockHitResult target = DoorUtil.raycastDoor(state, world, pos, entity);
-            if (target != null) {
-                final ActionResult result = state.onUse(world, entity.aiex$getBrain().fakePlayerDelegate(), Hand.MAIN_HAND, target);
-                if (result.shouldSwingHand()) {
-                    entity.swingHand(Hand.MAIN_HAND);
-                }
-            }
-        }
+        interactDoor(door.direction(), new BlockPos(door.doorX(), door.doorY(), door.doorZ()), false);
     }
 
     protected void openDoor(final NpcMovementNode.OpenDoor door) {
+        interactDoor(door.direction(), new BlockPos(door.doorX(), door.doorY(), door.doorZ()), true);
+        handle(door.inner());
+    }
+
+    protected void interactDoor(final Direction direction, final BlockPos pos, final boolean open) {
         final World world = entity.getEntityWorld();
-        final BlockPos pos = BlockPos.ofFloored(door.doorX(), door.doorY(), door.doorZ());
-        final Direction direction = door.direction();
         final BlockState state = world.getBlockState(pos);
-        if (!DoorUtil.canPassThroughDoor(state, direction) && entity.aiex$getBrain().hasFakePlayerDelegate()) {
+        if ((open ^ DoorUtil.canPassThroughDoor(state, direction)) && entity.aiex$getBrain().hasFakePlayerDelegate()) {
             final BlockHitResult target = DoorUtil.raycastDoor(state, world, pos, entity);
             if (target != null) {
                 final ActionResult result = state.onUse(world, entity.aiex$getBrain().fakePlayerDelegate(), Hand.MAIN_HAND, target);
@@ -169,7 +160,6 @@ public class BasicNpcMoveControl implements NpcMoveControl {
                 }
             }
         }
-        handle(door.inner());
     }
 
     protected float wrapDegrees(final float from, final float to, final float max) {

@@ -56,7 +56,7 @@ public class DefaultUseItemTask<T extends LivingEntity> implements BrainNode<T, 
         try (final var l = logger.open("DefaultUseItemImpl")) {
             if (handToken == null || !handToken.active()) {
                 l.debug("Trying to acquire hand token");
-                handToken = context.brain().resources().get(hand == Hand.MAIN_HAND ? BrainResource.MAIN_HAND_CONTROL : BrainResource.OFF_HAND_CONTROL).orElse(null);
+                handToken = context.brain().resources().get(hand == Hand.MAIN_HAND ? BrainResource.ACTIVE_MAIN_HAND_CONTROL : BrainResource.ACTIVE_OFF_HAND_CONTROL).orElse(null);
                 if (handToken == null) {
                     l.debug("Failed!");
                     return new BasicTasks.UseItem.ResourceAcquisitionError();
@@ -90,7 +90,7 @@ public class DefaultUseItemTask<T extends LivingEntity> implements BrainNode<T, 
             if (action == UseAction.BLOCK || action == UseAction.BOW || action == UseAction.CROSSBOW || action == UseAction.SPYGLASS) {
                 if (offHandToken == null || !offHandToken.active()) {
                     l.debug("Trying to acquire off-hand token");
-                    offHandToken = context.brain().resources().get(hand != Hand.MAIN_HAND ? BrainResource.MAIN_HAND_CONTROL : BrainResource.OFF_HAND_CONTROL).orElse(null);
+                    offHandToken = context.brain().resources().get(hand != Hand.MAIN_HAND ? BrainResource.ACTIVE_MAIN_HAND_CONTROL : BrainResource.ACTIVE_OFF_HAND_CONTROL).orElse(null);
                     if (offHandToken == null) {
                         l.debug("Failed!");
                         return new BasicTasks.UseItem.UsingOtherHandError();

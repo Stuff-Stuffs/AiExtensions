@@ -12,7 +12,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 public interface NpcBlockPlacementHandler<T> {
-    boolean handle(Item item, BrainContext<? extends T> context, BlockPos pos, Predicate<BlockState> targetState);
+    boolean handle(Item item, BrainContext<T> context, BlockPos pos, Predicate<BlockState> targetState);
 
     Set<Item> handles();
 

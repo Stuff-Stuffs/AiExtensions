@@ -1,33 +1,31 @@
 package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
+import io.github.stuff_stuffs.advanced_ai_pathing.common.api.util.ShapeCache;
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.Vec3d;
-import org.apache.commons.lang3.mutable.MutableObject;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
-import java.util.function.BiFunction;
 
-public class DefaultWalkTask<T extends Entity> implements BrainNode<T, BasicTasks.Walk.Result, BrainResourceRepository> {
-    private final Vec3d target;
+public class DefaultWalkTask<T extends LivingEntity> implements BrainNode<T, BasicTasks.Walk.Result, BrainResourceRepository> {
+    private final EntityPather.Target target;
     private final double maxError;
     private final double urgency;
     private final double maxPathLength;
     private final boolean partial;
     private @Nullable BrainResources.Token token = null;
+    private boolean started = false;
 
-    public DefaultWalkTask(final Vec3d target, final double maxError, final double urgency, final double maxPathLength, final boolean partial) {
+    public DefaultWalkTask(final EntityPather.Target target, final double maxError, final double urgency, final double maxPathLength, final boolean partial) {
         this.target = target;
         this.maxError = maxError;
         this.urgency = urgency;
@@ -37,13 +35,21 @@ public class DefaultWalkTask<T extends Entity> implements BrainNode<T, BasicTask
 
     @Override
     public void init(final BrainContext<T> context, final SpannedLogger logger) {
+        started = false;
     }
 
     @Override
     public BasicTasks.Walk.Result tick(final BrainContext<T> context, final BrainResourceRepository arg, final SpannedLogger logger) {
         try (final var l = logger.open("DefaultWalkImpl")) {
             if (token == null || !token.active()) {
-                final Optional<BrainResources.Token> token = context.brain().resources().get(BrainResource.BODY_CONTROL);
+                if (started) {
+                    final EntityPather navigator = AiExApi.ENTITY_NAVIGATOR.find(context.entity(), null);
+                    if (navigator != null) {
+                        navigator.stop();
+                    }
+                    started = false;
+                }
+                final Optional<BrainResources.Token> token = context.brain().resources().get(BrainResource.ACTIVE_BODY_CONTROL);
                 l.debug("Trying to acquire body token");
                 if (token.isEmpty()) {
                     l.debug("Failed");
@@ -56,9 +62,10 @@ public class DefaultWalkTask<T extends Entity> implements BrainNode<T, BasicTask
                     l.error("Cannot find EntityNavigator!");
                     return BasicTasks.Walk.Result.RESOURCE_ACQUISITION_ERROR;
                 }
-                if (!navigator.startFollowingPath(new EntityPather.SingleTarget(target), maxError, maxPathLength, partial, urgency)) {
+                if (!navigator.startFollowingPath(target, maxError, maxPathLength, partial, urgency)) {
                     return BasicTasks.Walk.Result.CANNOT_REACH;
                 }
+                started = true;
             }
             final EntityPather navigator = AiExApi.ENTITY_NAVIGATOR.find(context.entity(), null);
             if (navigator == null) {
@@ -68,7 +75,32 @@ public class DefaultWalkTask<T extends Entity> implements BrainNode<T, BasicTask
             if (!navigator.idle()) {
                 return BasicTasks.Walk.Result.CONTINUE;
             }
-            return context.entity().getPos().squaredDistanceTo(target) <= maxError * maxError ? BasicTasks.Walk.Result.DONE : BasicTasks.Walk.Result.CANNOT_REACH;
+            final boolean closeEnough;
+            if (target instanceof EntityPather.SingleTarget singleTarget) {
+                closeEnough = context.entity().getPos().squaredDistanceTo(singleTarget.target()) <= maxError * maxError;
+            } else if (target instanceof EntityPather.MetricTarget metricTarget) {
+                final BlockPos pos = context.entity().getBlockPos();
+                final ShapeCache shapeCache = ShapeCache.createUnbounded(context.world(), 1024);
+                closeEnough = metricTarget.score(pos.getX(), pos.getY(), pos.getZ(), new EntityPather.EntityContext() {
+                    @Override
+                    public LivingEntity entity() {
+                        return context.entity();
+                    }
+
+                    @Override
+                    public double maxPathLength() {
+                        return maxPathLength;
+                    }
+
+                    @Override
+                    public ShapeCache cache() {
+                        return shapeCache;
+                    }
+                }) < maxError;
+            } else {
+                throw new AssertionError();
+            }
+            return closeEnough ? BasicTasks.Walk.Result.DONE : BasicTasks.Walk.Result.CANNOT_REACH;
         }
     }
 
@@ -76,22 +108,9 @@ public class DefaultWalkTask<T extends Entity> implements BrainNode<T, BasicTask
     public void deinit(final BrainContext<T> context, final SpannedLogger logger) {
         try (final var l = logger.open("DefaultWalkImpl")) {
             if (token != null && token.active()) {
-                l.debug("Releasing boy token");
+                l.debug("Releasing body token");
                 context.brain().resources().release(token);
             }
         }
-    }
-
-    public static <T extends Entity> BrainNode<T, BasicTasks.Walk.Result, BrainResourceRepository> dynamic(final BasicTasks.Walk.DynamicParameters parameters) {
-        final MutableObject<Vec3d> last = new MutableObject<>(parameters.target());
-        return BrainNodes.expectResult(new TaskBrainNode<>(BasicTasks.Walk.KEY, (BiFunction<BrainResourceRepository, BrainContext<T>, BasicTasks.Walk.Parameters>) (repository, context) -> parameters, (arg, context) -> arg).resetOnContext((context, repository) -> {
-            final double r = parameters.maxError() * 0.25;
-            final Vec3d current = parameters.target();
-            if (last.getValue().squaredDistanceTo(current) > r * r) {
-                last.setValue(current);
-                return true;
-            }
-            return false;
-        }), () -> new RuntimeException("No applicable task factory found!"));
     }
 }

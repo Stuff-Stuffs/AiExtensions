@@ -131,8 +131,4 @@ public interface BrainNode<C, R, FC> {
     default <R0, FC0> BrainNode<C, R0, FC> secondary(final BrainNode<C, R0, FC0> secondary, final BiFunction<FC, R, FC0> combiner) {
         return new SecondaryBrainNode<>(this, secondary, combiner);
     }
-
-    default <R0, A> BrainNode<C, R0, FC> loop(final BiPredicate<BrainContext<C>, A> stop, final BiFunction<BrainContext<C>, FC, A> start, final BiFunction<A, R, A> fold, final BiFunction<BrainContext<C>, A, R0> finish, final int maxIterations) {
-        return new LoopBrainNode<>(this, stop, start, fold, finish, maxIterations);
-    }
 }

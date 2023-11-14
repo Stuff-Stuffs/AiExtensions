@@ -39,7 +39,7 @@ public class DefaultLookTask<T extends LivingEntity> implements BrainNode<T, Bas
         try (final var l = logger.open("DefaultLookImpl")) {
             if (headToken == null || !headToken.active()) {
                 l.debug("Try to acquire head token!");
-                headToken = arg.get(BrainResource.HEAD_CONTROL).orElse(null);
+                headToken = arg.get(BrainResource.ACTIVE_HEAD_CONTROL).orElse(null);
                 if (headToken == null) {
                     l.debug("Failed");
                     return BasicTasks.Look.Result.RESOURCE_ACQUISITION_ERROR;
@@ -55,7 +55,7 @@ public class DefaultLookTask<T extends LivingEntity> implements BrainNode<T, Bas
             if (MathHelper.angleBetween(headYaw, entity.getYaw()) > 60.0F) {
                 if (bodyToken == null || !bodyToken.active()) {
                     l.debug("Try to acquire body token!");
-                    bodyToken = arg.get(BrainResource.BODY_CONTROL).orElse(null);
+                    bodyToken = arg.get(BrainResource.ACTIVE_BODY_CONTROL).orElse(null);
                     if (bodyToken == null) {
                         l.debug("Failed");
                         return BasicTasks.Look.Result.FAILED;
@@ -79,7 +79,7 @@ public class DefaultLookTask<T extends LivingEntity> implements BrainNode<T, Bas
                 if (MathHelper.angleBetween(headYaw, entity.getYaw()) > 1.5F) {
                     if (bodyToken == null || !bodyToken.active()) {
                         l.debug("Try to acquire body token!");
-                        bodyToken = arg.get(BrainResource.BODY_CONTROL).orElse(null);
+                        bodyToken = arg.get(BrainResource.ACTIVE_BODY_CONTROL).orElse(null);
                         if (bodyToken == null) {
                             l.debug("Failed");
                         } else {

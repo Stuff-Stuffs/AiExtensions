@@ -24,7 +24,7 @@ public interface BrainConfig {
     }
 
     Key<Double> DEFAULT_REACH_DISTANCE = new Key<>(Double.class, 4.0);
-    Key<Long> DEFAULT_UNREACHABLE_TIMEOUT = new Key<>(Long.class, 40L);
+    Key<Long> DEFAULT_UNREACHABLE_TIMEOUT = new Key<>(Long.class, 200L);
 
     record Key<T>(Class<T> clazz, T defaultValue) {
         private static final Map<Identifier, Key<?>> FORWARD_REGISTRY = new Object2ReferenceOpenHashMap<>();

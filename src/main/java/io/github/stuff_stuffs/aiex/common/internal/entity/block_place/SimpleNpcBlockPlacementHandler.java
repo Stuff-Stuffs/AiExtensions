@@ -21,7 +21,7 @@ public class SimpleNpcBlockPlacementHandler<T> implements NpcBlockPlacementHandl
     }
 
     @Override
-    public boolean handle(final Item item, final BrainContext<? extends T> context, final BlockPos pos, final Predicate<BlockState> targetState) {
+    public boolean handle(final Item item, final BrainContext<T> context, final BlockPos pos, final Predicate<BlockState> targetState) {
         if (!handled.contains(item) || !context.hasPlayerDelegate() || !(item instanceof BlockItem blockItem)) {
             return false;
         }

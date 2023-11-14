@@ -7,6 +7,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventTypes;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.BasicMemories;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfigurator;
 import io.github.stuff_stuffs.aiex.common.api.debug.AiExDebugFlags;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiEntity;
 import io.github.stuff_stuffs.aiex.common.api.entity.mine.BasicMiningUniverse;
@@ -69,6 +70,12 @@ public class AiExCommon implements ModInitializer {
         BasicMemories.init();
         AfterRegistryFreezeEvent.EVENT.register(EntityReferenceDataTypeCache::clear);
         Registry.register(AiExDebugFlags.REGISTRY, id("aoi"), AreaOfInterestDebugMessage.FLAG);
+        TaskConfigurator.init();
+        ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
+            if (entity instanceof AiEntity ai) {
+                ai.aiex$getBrain().unload();
+            }
+        });
     }
 
     public static <B, T extends B> TypeFilter<B, T> createDelegatingTypeFilter(final Class<T> cls) {

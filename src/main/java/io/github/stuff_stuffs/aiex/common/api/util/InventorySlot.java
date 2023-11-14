@@ -26,7 +26,11 @@ public class InventorySlot {
     }
 
     public BrainResource resource() {
-        return internal.map(BrainResource::ofEquipmentSlot, BrainResource::ofInventorySlot);
+        return resource(BrainResource.Priority.ACTIVE);
+    }
+
+    public BrainResource resource(final BrainResource.Priority priority) {
+        return internal.map(slot -> BrainResource.ofEquipmentSlot(slot, priority), index -> BrainResource.ofInventorySlot(index, priority));
     }
 
     public Optional<EquipmentSlot> equipmentSlot() {

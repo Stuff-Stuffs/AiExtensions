@@ -11,7 +11,7 @@
     "MixinServer",
     "MixinServerWorld",
     "MixinWorldSavePath",
-    "fake_player.EntityTrackingSectionMixin",
+    "fake_player.MixinEntityTrackingSection",
     "fake_player.MixinBarrelBlockEntity$ViewerCountManager",
     "fake_player.MixinChestBlockEntity$ViewerCountManager",
     "fake_player.MixinDamageSource",

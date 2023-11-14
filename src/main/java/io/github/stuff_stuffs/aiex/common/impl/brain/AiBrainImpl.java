@@ -173,6 +173,17 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
     }
 
     @Override
+    public void unload() {
+        if (init) {
+            final BrainContext<T> context = createContext();
+            init = false;
+            try (final SpannedLogger child = logger.open("root")) {
+                rootNode.deinit(context, child);
+            }
+        }
+    }
+
+    @Override
     public void writeNbt(final NbtCompound nbt) {
         nbt.putLong("age", age);
         nbt.putLong("seed", seed);

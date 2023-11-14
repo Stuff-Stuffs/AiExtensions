@@ -2,12 +2,14 @@ package io.github.stuff_stuffs.aiex.common.api.brain.node;
 
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.ForwardingBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.IfBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 
 public final class BrainNodes {
@@ -215,8 +217,8 @@ public final class BrainNodes {
         };
     }
 
-    public static <C, FC> BrainNode<C, FC, FC> forwardArg(final BrainNode<C, Unit, FC> node) {
-        return node.contextCapture((arg, ret) -> arg);
+    public static <C, FC> BrainNode<C, FC, FC> shortCircuit(final BiPredicate<BrainContext<C>, FC> predicate, final BrainNode<C, FC, FC> fallback) {
+        return new IfBrainNode<>(new ForwardingBrainNode<>(), fallback, predicate);
     }
 
     private BrainNodes() {

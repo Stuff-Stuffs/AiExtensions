@@ -1,4 +1,4 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.node.basic;
+package io.github.stuff_stuffs.aiex.common.api.brain.node.basic.memory;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.memory.MemoryName;
@@ -6,6 +6,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class NamedRememberingBrainNode<C, M, FC> implements BrainNode<C, M, FC> {
     private final BiFunction<BrainContext<C>, FC, MemoryName<M>> nameExtractor;
@@ -13,6 +14,18 @@ public class NamedRememberingBrainNode<C, M, FC> implements BrainNode<C, M, FC> 
 
     public NamedRememberingBrainNode(final MemoryName<M> name, final BiFunction<BrainContext<C>, FC, M> memoryExtractor) {
         this((context, arg) -> name, memoryExtractor);
+    }
+
+    public NamedRememberingBrainNode(final Function<FC, MemoryName<M>> nameExtractor, final BiFunction<BrainContext<C>, FC, M> memoryExtractor) {
+        this((context, arg) -> nameExtractor.apply(arg), memoryExtractor);
+    }
+
+    public NamedRememberingBrainNode(final BiFunction<BrainContext<C>, FC, MemoryName<M>> nameExtractor, final Function<FC, M> memoryExtractor) {
+        this(nameExtractor, (context, arg) -> memoryExtractor.apply(arg));
+    }
+
+    public NamedRememberingBrainNode(final Function<FC, MemoryName<M>> nameExtractor, final Function<FC, M> memoryExtractor) {
+        this((context, arg) -> nameExtractor.apply(arg), (context, arg) -> memoryExtractor.apply(arg));
     }
 
     public NamedRememberingBrainNode(final BiFunction<BrainContext<C>, FC, MemoryName<M>> nameExtractor, final BiFunction<BrainContext<C>, FC, M> memoryExtractor) {

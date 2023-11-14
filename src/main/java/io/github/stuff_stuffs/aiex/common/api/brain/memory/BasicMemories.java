@@ -13,11 +13,13 @@ import java.util.*;
 
 public final class BasicMemories {
     public static final MemoryType<Integer> INT_MEMORY_TYPE = () -> Codec.INT;
-    public static final MemoryType<BlockPos> BLOCK_POS_MEMORY_TYPE = () -> BlockPos.CODEC;
-    public static final MemoryType<AreaOfInterestReference<?>> GENERIC_AREA_OF_INTEREST_MEMORY_TYPE = () -> AreaOfInterestReference.CODEC;
+    public static final MemoryType<BlockPos> BLOCK_POS_TYPE = () -> BlockPos.CODEC;
+    public static final MemoryType<AreaOfInterestReference<?>> GENERIC_AREA_OF_INTEREST_TYPE = () -> AreaOfInterestReference.CODEC;
     public static final MemoryType<UUID> UUID_MEMORY_TYPE = () -> Uuids.STRING_CODEC;
     public static final MemoryType<UnreachableAreaOfInterestSet> UNREACHABLE_AOI_MEMORY_TYPE = () -> UnreachableAreaOfInterestSet.CODEC;
+    public static final MemoryType<TickCountdownMemory> TICK_COUNTDOWN_TYPE = () -> TickCountdownMemory.CODEC;
     public static final MemoryName<UnreachableAreaOfInterestSet> BASIC_UNREACHABLE_AREA_NAME = () -> UNREACHABLE_AOI_MEMORY_TYPE;
+    public static final MemoryName<TickCountdownMemory> USE_ITEM_COOLDOWN_TICKS = () -> TICK_COUNTDOWN_TYPE;
 
     public static <T extends AreaOfInterest> MemoryType<AreaOfInterestReference<T>> areaOfInterest(final AreaOfInterestType<T> type) {
         final Codec<AreaOfInterestReference<T>> codec = AreaOfInterestReference.typeSpecificCodec(type);
@@ -78,11 +80,13 @@ public final class BasicMemories {
 
     public static void init() {
         Registry.register(MemoryType.REGISTRY, AiExCommon.id("int"), INT_MEMORY_TYPE);
-        Registry.register(MemoryType.REGISTRY, AiExCommon.id("block_pos"), BLOCK_POS_MEMORY_TYPE);
-        Registry.register(MemoryType.REGISTRY, AiExCommon.id("generic_aoi"), GENERIC_AREA_OF_INTEREST_MEMORY_TYPE);
+        Registry.register(MemoryType.REGISTRY, AiExCommon.id("block_pos"), BLOCK_POS_TYPE);
+        Registry.register(MemoryType.REGISTRY, AiExCommon.id("generic_aoi"), GENERIC_AREA_OF_INTEREST_TYPE);
         Registry.register(MemoryType.REGISTRY, AiExCommon.id("uuid"), UUID_MEMORY_TYPE);
         Registry.register(MemoryType.REGISTRY, AiExCommon.id("unreachable_aoi"), UNREACHABLE_AOI_MEMORY_TYPE);
+        Registry.register(MemoryType.REGISTRY, AiExCommon.id("tick_countdown"), TICK_COUNTDOWN_TYPE);
         Registry.register(MemoryName.REGISTRY, AiExCommon.id("basic_unreachable"), BASIC_UNREACHABLE_AREA_NAME);
+        Registry.register(MemoryName.REGISTRY, AiExCommon.id("use_item_cooldown_ticks"), USE_ITEM_COOLDOWN_TICKS);
     }
 
     private BasicMemories() {

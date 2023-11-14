@@ -96,6 +96,11 @@ public abstract class AbstractNpcEntityPather<C extends EntityPather.EntityConte
         }
     }
 
+    @Override
+    public void stop() {
+        entity.getNpcMoveControl().set(List.of());
+    }
+
     protected record LastPathData(Target target, double maxError, double maxPathLength, boolean partial, double urgency,
                                   boolean immediate) {
     }

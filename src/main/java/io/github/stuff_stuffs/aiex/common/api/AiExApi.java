@@ -15,6 +15,7 @@ import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.ItemCooldownManager;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.TagKey;
@@ -45,24 +46,7 @@ public final class AiExApi {
             }
             return null;
         });
-        new TaskConfigurator().add(Entity.class, (entity, builder, accessor) -> {
-            final EntityPather navigator = AiExApi.ENTITY_NAVIGATOR.find(entity, null);
-            if (navigator != null) {
-                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> basic = parameters -> new DefaultWalkTask<>(parameters.target(), parameters.maxError(), parameters.urgency(), parameters.maxPathLength(), parameters.partial());
-                if (accessor.has(BasicTasks.Walk.KEY)) {
-                    final TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.Walk.KEY);
-                    basic = current.fallbackTo(basic);
-                }
-                accessor.put(BasicTasks.Walk.KEY, basic);
-            }
-            if (builder.hasFactory(BasicTasks.Walk.KEY)) {
-                TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters, BrainResourceRepository> basic = DefaultWalkTask::dynamic;
-                if (accessor.has(BasicTasks.Walk.DYNAMIC_KEY)) {
-                    final TaskConfig.Factory<Entity, BasicTasks.Walk.Result, BasicTasks.Walk.DynamicParameters, BrainResourceRepository> current = accessor.get(BasicTasks.Walk.DYNAMIC_KEY);
-                    basic = current.fallbackTo(basic);
-                }
-                accessor.put(BasicTasks.Walk.DYNAMIC_KEY, basic);
-            }
+        TaskConfigurator.add(Entity.class, (entity, builder, accessor) -> {
             if (builder.hasFactory(BasicTasks.Look.KEY)) {
                 TaskConfig.Factory<Entity, BasicTasks.Look.Result, BasicTasks.Look.EntityParameters, BrainResourceRepository> basic = parameters -> new DefaultEntityLookTask<>(parameters.entity(), parameters.type(), parameters.lookSpeed());
                 if (builder.hasFactory(BasicTasks.Look.ENTITY_KEY)) {
@@ -79,28 +63,43 @@ public final class AiExApi {
                 }
                 accessor.put(BasicTasks.Look.ENTITY_DYNAMIC_KEY, basic);
             }
-        }).add(LivingEntity.class, (entity, builder, accessor) -> {
+        });
+        TaskConfigurator.add(LivingEntity.class, (entity, builder, accessor) -> {
+            final EntityPather navigator = AiExApi.ENTITY_NAVIGATOR.find(entity, null);
+            if (navigator != null) {
+                TaskConfig.Factory<LivingEntity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> basic = parameters -> new DefaultWalkTask<>(parameters.target(), parameters.maxError(), parameters.urgency(), parameters.maxPathLength(), parameters.partial());
+                if (accessor.has(BasicTasks.Walk.KEY)) {
+                    final TaskConfig.Factory<LivingEntity, BasicTasks.Walk.Result, BasicTasks.Walk.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.Walk.KEY);
+                    basic = current.fallbackTo(basic);
+                }
+                accessor.put(BasicTasks.Walk.KEY, basic);
+            }
+        });
+        TaskConfigurator.add(LivingEntity.class, (entity, builder, accessor) -> {
             TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters, BrainResourceRepository> basic = parameters -> new DefaultLookTask<>(parameters.lookDir(), parameters.lookSpeed());
             if (accessor.has(BasicTasks.Look.KEY)) {
                 final TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.Look.KEY);
                 basic = current.fallbackTo(basic);
             }
             accessor.put(BasicTasks.Look.KEY, basic);
-        }).add(LivingEntity.class, (entity, builder, accessor) -> {
+        });
+        TaskConfigurator.add(LivingEntity.class, (entity, builder, accessor) -> {
             TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters, BrainResourceRepository> basic = DefaultLookTask::dynamic;
             if (builder.hasFactory(BasicTasks.Look.DYNAMIC_KEY)) {
                 final TaskConfig.Factory<LivingEntity, BasicTasks.Look.Result, BasicTasks.Look.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.Look.DYNAMIC_KEY);
                 basic = current.fallbackTo(basic);
             }
             accessor.put(BasicTasks.Look.DYNAMIC_KEY, basic);
-        }).add(LivingEntity.class, (entity, builder, accessor) -> {
+        });
+        TaskConfigurator.add(LivingEntity.class, (entity, builder, accessor) -> {
             TaskConfig.Factory<LivingEntity, BasicTasks.UseItem.Result, BasicTasks.UseItem.Parameters, BrainResourceRepository> basic = DefaultUseItemTask::new;
             if (builder.hasFactory(BasicTasks.UseItem.KEY)) {
                 final TaskConfig.Factory<LivingEntity, BasicTasks.UseItem.Result, BasicTasks.UseItem.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.UseItem.KEY);
                 basic = current.fallbackTo(basic);
             }
             accessor.put(BasicTasks.UseItem.KEY, basic);
-        }).add(Entity.class, (entity, builder, accessor) -> {
+        });
+        TaskConfigurator.add(Entity.class, (entity, builder, accessor) -> {
             if (NPC_INVENTORY.find(entity, null) != null) {
                 {
                     TaskConfig.Factory<Entity, BasicTasks.SwapStack.Result, BasicTasks.SwapStack.Parameters, BrainResourceRepository> basic = DefaultSwapStackTask::new;
@@ -111,23 +110,39 @@ public final class AiExApi {
                     accessor.put(BasicTasks.SwapStack.KEY, basic);
                 }
                 {
-                    TaskConfig.Factory<Entity, BasicTasks.SelectToolTask.Result, BasicTasks.SelectToolTask.Parameters, BrainResourceRepository> basic = parameters -> new DefaultSelectToolTask<>(parameters.state(), 3.0);
-                    if (accessor.has(BasicTasks.SelectToolTask.KEY)) {
-                        final TaskConfig.Factory<Entity, BasicTasks.SelectToolTask.Result, BasicTasks.SelectToolTask.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.SelectToolTask.KEY);
+                    TaskConfig.Factory<Entity, BasicTasks.SelectTool.Result, BasicTasks.SelectTool.Parameters, BrainResourceRepository> basic = parameters -> new DefaultSelectToolTask<>(parameters.state(), 3.0);
+                    if (accessor.has(BasicTasks.SelectTool.KEY)) {
+                        final TaskConfig.Factory<Entity, BasicTasks.SelectTool.Result, BasicTasks.SelectTool.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.SelectTool.KEY);
                         basic = current.fallbackTo(basic);
                     }
-                    accessor.put(BasicTasks.SelectToolTask.KEY, basic);
+                    accessor.put(BasicTasks.SelectTool.KEY, basic);
                 }
                 {
-                    TaskConfig.Factory<Entity, BasicTasks.MoveItemsToContainerTask.Result, BasicTasks.MoveItemsToContainerTask.Parameters, BrainResourceRepository> basic = parameters -> new DefaultMoveItemsToContainerTask<>(parameters.container(), parameters.filter(), parameters.side(), parameters.speed());
-                    if (accessor.has(BasicTasks.MoveItemsToContainerTask.KEY)) {
-                        final TaskConfig.Factory<Entity, BasicTasks.MoveItemsToContainerTask.Result, BasicTasks.MoveItemsToContainerTask.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.MoveItemsToContainerTask.KEY);
+                    TaskConfig.Factory<Entity, BasicTasks.MoveItemsToContainer.Result, BasicTasks.MoveItemsToContainer.Parameters, BrainResourceRepository> basic = parameters -> new DefaultMoveItemsToContainerTask<>(parameters.container(), parameters.filter(), parameters.side(), parameters.speed());
+                    if (accessor.has(BasicTasks.MoveItemsToContainer.KEY)) {
+                        final TaskConfig.Factory<Entity, BasicTasks.MoveItemsToContainer.Result, BasicTasks.MoveItemsToContainer.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.MoveItemsToContainer.KEY);
                         basic = current.fallbackTo(basic);
                     }
-                    accessor.put(BasicTasks.MoveItemsToContainerTask.KEY, basic);
+                    accessor.put(BasicTasks.MoveItemsToContainer.KEY, basic);
                 }
             }
-        }).build();
+        });
+        TaskConfigurator.add(LivingEntity.class, (entity, builder, accessor) -> {
+            TaskConfig.Factory<LivingEntity, BasicTasks.PlaceBlock.Result, BasicTasks.PlaceBlock.Parameters, BrainResourceRepository> basic = DefaultPlaceBlockTask::new;
+            if (builder.hasFactory(BasicTasks.UseItem.KEY)) {
+                final TaskConfig.Factory<LivingEntity, BasicTasks.PlaceBlock.Result, BasicTasks.PlaceBlock.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.PlaceBlock.KEY);
+                basic = current.fallbackTo(basic);
+            }
+            accessor.put(BasicTasks.PlaceBlock.KEY, basic);
+        });
+        TaskConfigurator.add(MobEntity.class, (entity, builder, accessor) -> {
+            TaskConfig.Factory<MobEntity, BasicTasks.MineBlock.Result, BasicTasks.MineBlock.Parameters, BrainResourceRepository> basic = parameters -> new DefaultMineBlockTask<>(parameters.pos());
+            if (builder.hasFactory(BasicTasks.UseItem.KEY)) {
+                final TaskConfig.Factory<MobEntity, BasicTasks.MineBlock.Result, BasicTasks.MineBlock.Parameters, BrainResourceRepository> current = accessor.get(BasicTasks.MineBlock.KEY);
+                basic = current.fallbackTo(basic);
+            }
+            accessor.put(BasicTasks.MineBlock.KEY, basic);
+        });
     }
 
     public interface Job {

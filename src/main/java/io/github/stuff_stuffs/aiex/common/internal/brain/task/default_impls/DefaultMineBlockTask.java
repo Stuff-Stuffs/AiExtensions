@@ -1,4 +1,4 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.node.basic;
+package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
@@ -6,6 +6,7 @@ import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResource;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -21,10 +22,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
-public class MineBlockBrainNode<C extends MobEntity> implements BrainNode<C, MineBlockBrainNode.Result, MineBlockBrainNode.Arguments> {
+public class DefaultMineBlockTask<C extends MobEntity> implements BrainNode<C, BasicTasks.MineBlock.Result, BrainResourceRepository> {
+    private final BlockPos pos;
     private State state;
 
-    public MineBlockBrainNode() {
+    public DefaultMineBlockTask(final BlockPos pos) {
+        this.pos = pos.toImmutable();
     }
 
     @Override
@@ -33,16 +36,12 @@ public class MineBlockBrainNode<C extends MobEntity> implements BrainNode<C, Min
     }
 
     @Override
-    public Result tick(final BrainContext<C> context, final Arguments arg, final SpannedLogger logger) {
+    public BasicTasks.MineBlock.Result tick(final BrainContext<C> context, final BrainResourceRepository arg, final SpannedLogger logger) {
         try (final var l = logger.open("MineBlock")) {
-            if (state != null && !arg.pos().equals(state.pos)) {
-                state.deinit(context);
-                state = null;
-            }
             if (state == null) {
-                state = new State(arg.pos());
+                state = new State(pos);
             }
-            return state.tick(context, arg.repository(), l);
+            return state.tick(context, arg, l);
         }
     }
 
@@ -51,29 +50,9 @@ public class MineBlockBrainNode<C extends MobEntity> implements BrainNode<C, Min
         try (final var l = logger.open("MineBlock")) {
             if (state != null) {
                 state.deinit(context);
+                state = null;
             }
         }
-    }
-
-    public sealed interface Result {
-    }
-
-    public record BlockSwap(BlockState expected, BlockState got) implements Result {
-    }
-
-    public record Error(ErrorType type) implements Result {
-    }
-
-    public record Broken() implements Result {
-    }
-
-    public record Continue(float blockBreakingDelta) implements Result {
-    }
-
-    public enum ErrorType {
-        NO_OUTLINE_SHAPE,
-        CANT_REACH,
-        RESOURCE_ACQUISITION
     }
 
     private static final class State {
@@ -88,9 +67,9 @@ public class MineBlockBrainNode<C extends MobEntity> implements BrainNode<C, Min
             this.pos = pos.toImmutable();
         }
 
-        private <C extends MobEntity> Result tick(final BrainContext<C> context, final BrainResourceRepository arg, final SpannedLogger logger) {
+        private <C extends MobEntity> BasicTasks.MineBlock.Result tick(final BrainContext<C> context, final BrainResourceRepository arg, final SpannedLogger logger) {
             if (!breaking) {
-                final Result r = setup(context, arg);
+                final BasicTasks.MineBlock.Result r = setup(context, arg);
                 if (r != null) {
                     return r;
                 }
@@ -103,9 +82,9 @@ public class MineBlockBrainNode<C extends MobEntity> implements BrainNode<C, Min
                     started = false;
                     final BlockState state = context.world().getBlockState(pos);
                     if (state != this.state) {
-                        return new BlockSwap(this.state, state);
+                        return new BasicTasks.MineBlock.BlockSwap(this.state, state);
                     }
-                    return new Error(ErrorType.CANT_REACH);
+                    return new BasicTasks.MineBlock.Error(BasicTasks.MineBlock.ErrorType.CANT_REACH);
                 }
             }
             return tick(context, arg);
@@ -134,11 +113,11 @@ public class MineBlockBrainNode<C extends MobEntity> implements BrainNode<C, Min
             return raycast != null;
         }
 
-        private <C extends MobEntity> Result tick(final BrainContext<C> context, final BrainResourceRepository arg) {
+        private <C extends MobEntity> BasicTasks.MineBlock.Result tick(final BrainContext<C> context, final BrainResourceRepository arg) {
             if (armToken == null || !armToken.active()) {
-                armToken = arg.get(BrainResource.MAIN_HAND_CONTROL).orElse(null);
+                armToken = arg.get(BrainResource.ACTIVE_MAIN_HAND_CONTROL).orElse(null);
                 if (armToken == null) {
-                    return new Error(ErrorType.RESOURCE_ACQUISITION);
+                    return new BasicTasks.MineBlock.Error(BasicTasks.MineBlock.ErrorType.RESOURCE_ACQUISITION);
                 }
             }
             if (!started) {
@@ -154,45 +133,45 @@ public class MineBlockBrainNode<C extends MobEntity> implements BrainNode<C, Min
                 state = null;
                 context.world().setBlockBreakingInfo(context.entity().getId(), pos, -1);
                 context.brain().resources().release(armToken);
-                return new Broken();
+                return new BasicTasks.MineBlock.Broken();
             } else {
                 context.world().setBlockBreakingInfo(context.entity().getId(), pos, (int) (f * 10.0F));
-                return new Continue(f);
+                return new BasicTasks.MineBlock.Continue(f);
             }
         }
 
         @Nullable
-        private <C extends Entity> Result setup(final BrainContext<C> context, final BrainResourceRepository repository) {
+        private <C extends Entity> BasicTasks.MineBlock.Result setup(final BrainContext<C> context, final BrainResourceRepository repository) {
             if (armToken == null || armToken.active()) {
                 if (armToken != null) {
                     context.brain().resources().release(armToken);
                 }
-                armToken = repository.get(BrainResource.MAIN_HAND_CONTROL).orElse(null);
+                armToken = repository.get(BrainResource.ACTIVE_MAIN_HAND_CONTROL).orElse(null);
                 if (armToken == null) {
-                    return new Error(ErrorType.RESOURCE_ACQUISITION);
+                    return new BasicTasks.MineBlock.Error(BasicTasks.MineBlock.ErrorType.RESOURCE_ACQUISITION);
                 }
             }
             final BlockState state = context.world().getBlockState(pos);
             if (state.isAir()) {
-                return new Broken();
+                return new BasicTasks.MineBlock.Broken();
             }
             final Vec3d eyePos = context.entity().getEyePos();
             final Vec3d p = eyePos.subtract(pos.getX(), pos.getY(), pos.getZ());
             final VoxelShape outlineShape = state.getOutlineShape(context.world(), pos);
             final Optional<Vec3d> to = outlineShape.getClosestPointTo(p);
             if (to.isEmpty()) {
-                return new Error(ErrorType.NO_OUTLINE_SHAPE);
+                return new BasicTasks.MineBlock.Error(BasicTasks.MineBlock.ErrorType.NO_OUTLINE_SHAPE);
             }
             final Vec3d target = to.get().add(pos.getX(), pos.getY(), pos.getZ());
             final double reach = context.brain().config().get(BrainConfig.DEFAULT_REACH_DISTANCE);
             if (target.squaredDistanceTo(eyePos) > reach * reach) {
-                return new Error(ErrorType.CANT_REACH);
+                return new BasicTasks.MineBlock.Error(BasicTasks.MineBlock.ErrorType.CANT_REACH);
             }
             final Vec3d delta = target.subtract(eyePos);
             final Vec3d end = target.add(delta.multiply(0.01));
             final BlockHitResult raycast = outlineShape.raycast(eyePos, end, pos);
             if (raycast == null) {
-                return new Error(ErrorType.CANT_REACH);
+                return new BasicTasks.MineBlock.Error(BasicTasks.MineBlock.ErrorType.CANT_REACH);
             }
             this.state = state;
             breaking = true;
@@ -229,11 +208,5 @@ public class MineBlockBrainNode<C extends MobEntity> implements BrainNode<C, Min
                 started = false;
             }
         }
-    }
-
-    public interface Arguments {
-        BlockPos pos();
-
-        BrainResourceRepository repository();
     }
 }

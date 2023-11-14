@@ -7,30 +7,17 @@ import java.util.List;
 import java.util.Map;
 
 public class TaskConfigurator {
-    private final Map<Class<?>, List<ConfiguratorEntry<?>>> configurators;
-    private boolean built = false;
+    private static final Map<Class<?>, List<ConfiguratorEntry<?>>> CONFIGURATORS = new Reference2ObjectOpenHashMap<>();
 
-    public TaskConfigurator() {
-        configurators = new Reference2ObjectOpenHashMap<>();
+    public static <T> void add(final Class<T> clazz, final ConfiguratorEntry<T> configuratorEntry) {
+        CONFIGURATORS.computeIfAbsent(clazz, i -> new ArrayList<>()).add(configuratorEntry);
     }
 
-    public <T> TaskConfigurator add(final Class<T> clazz, final ConfiguratorEntry<T> configuratorEntry) {
-        if (built) {
-            throw new IllegalStateException();
-        }
-        configurators.computeIfAbsent(clazz, i -> new ArrayList<>()).add(configuratorEntry);
-        return this;
-    }
-
-    public void build() {
-        if (built) {
-            throw new IllegalStateException();
-        }
-        built = true;
+    public static void init() {
         TaskConfig.ON_BUILD_EVENT.register(new TaskConfig.OnBuild() {
             @Override
             public <T> void onBuild(final T entity, final TaskConfig.Builder<T> builder) {
-                for (final Map.Entry<Class<?>, List<ConfiguratorEntry<?>>> entry : configurators.entrySet()) {
+                for (final Map.Entry<Class<?>, List<ConfiguratorEntry<?>>> entry : CONFIGURATORS.entrySet()) {
                     if (entry.getKey().isInstance(entity)) {
                         for (final ConfiguratorEntry<?> configuratorEntry : entry.getValue()) {
                             cast(entity, builder, configuratorEntry);

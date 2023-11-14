@@ -2,6 +2,7 @@ package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
+import io.github.stuff_stuffs.aiex.common.api.entity.pathing.EntityPather;
 import io.github.stuff_stuffs.aiex.common.api.util.InventorySlot;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
@@ -22,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.OptionalInt;
-import java.util.UUID;
+import java.util.function.Predicate;
 
 public final class BasicTasks {
     public static final class Walk {
@@ -41,7 +42,7 @@ public final class BasicTasks {
         }
 
         public interface Parameters {
-            Vec3d target();
+            EntityPather.Target target();
 
             double maxError();
 
@@ -166,7 +167,7 @@ public final class BasicTasks {
         }
     }
 
-    public static final class SelectToolTask {
+    public static final class SelectTool {
         public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
 
         public sealed interface Result {
@@ -182,12 +183,12 @@ public final class BasicTasks {
             BlockState state();
         }
 
-        private SelectToolTask() {
+        private SelectTool() {
         }
     }
 
     @SuppressWarnings("UnstableApiUsage")
-    public static final class MoveItemsToContainerTask {
+    public static final class MoveItemsToContainer {
         public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
 
         public sealed interface Result {
@@ -227,7 +228,78 @@ public final class BasicTasks {
         public record Amount(long amount, OptionalInt target) {
         }
 
-        private MoveItemsToContainerTask() {
+        private MoveItemsToContainer() {
+        }
+    }
+
+    public static final class PlaceBlock {
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
+
+        public interface Parameters {
+            BlockPos pos();
+
+            Predicate<BlockState> targetState();
+        }
+
+        public sealed interface Result {
+        }
+
+        public record Error(ErrorType type) implements Result {
+
+        }
+
+        public enum ErrorType {
+            CANT_REACH,
+            RESOURCE_ACQUISITION,
+            UNKNOWN_ITEM
+        }
+
+        public record Cooldown(int tickRemaining) implements Result {
+
+        }
+
+        public record Success(BlockState state) implements Result {
+
+        }
+
+        public record UnexpectedState(BlockState state) implements Result {
+
+        }
+
+        public record SpaceOccupied(BlockState state) implements Result {
+
+        }
+    }
+
+    public static final class MineBlock {
+        public static final TaskKey<Result, Parameters, BrainResourceRepository> KEY = new TaskKey<>(Result.class, Parameters.class, BrainResourceRepository.class);
+
+        public interface Parameters {
+            BlockPos pos();
+        }
+
+        public sealed interface Result {
+        }
+
+        public record BlockSwap(BlockState expected, BlockState got) implements Result {
+        }
+
+        public record Error(ErrorType type) implements Result {
+        }
+
+        public record Broken() implements Result {
+        }
+
+        public record Continue(float blockBreakingDelta) implements Result {
+        }
+
+        public enum ErrorType {
+            NO_OUTLINE_SHAPE,
+            CANT_REACH,
+            RESOURCE_ACQUISITION
+        }
+
+        private MineBlock() {
         }
     }
 
@@ -240,8 +312,8 @@ public final class BasicTasks {
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("dynamic_look_entity"), Look.ENTITY_DYNAMIC_KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("basic_use_item"), UseItem.KEY);
         Registry.register(TaskKey.REGISTRY, AiExCommon.id("swap_stack"), SwapStack.KEY);
-        Registry.register(TaskKey.REGISTRY, AiExCommon.id("select_tool"), SelectToolTask.KEY);
-        Registry.register(TaskKey.REGISTRY, AiExCommon.id("move_items_to_container"), MoveItemsToContainerTask.KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("select_tool"), SelectTool.KEY);
+        Registry.register(TaskKey.REGISTRY, AiExCommon.id("move_items_to_container"), MoveItemsToContainer.KEY);
     }
 
     private BasicTasks() {

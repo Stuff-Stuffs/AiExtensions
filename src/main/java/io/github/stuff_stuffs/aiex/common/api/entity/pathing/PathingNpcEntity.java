@@ -10,7 +10,7 @@ public interface PathingNpcEntity {
     }
 
     default int priorityPathingPollRate() {
-        return 15;
+        return 20;
     }
 
     default int ensuredPathingRadius() {
@@ -18,7 +18,7 @@ public interface PathingNpcEntity {
     }
 
     default int pathingPollRate() {
-        return 40;
+        return 80;
     }
 
     Collection<LocationClassifier<?>> ensuredLocationClassifiers();
