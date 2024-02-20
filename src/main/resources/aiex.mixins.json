@@ -11,15 +11,10 @@
     "MixinServer",
     "MixinServerWorld",
     "MixinWorldSavePath",
-    "fake_player.MixinEntityTrackingSection",
-    "fake_player.MixinBarrelBlockEntity$ViewerCountManager",
-    "fake_player.MixinChestBlockEntity$ViewerCountManager",
     "fake_player.MixinDamageSource",
     "fake_player.MixinDamageSources",
-    "fake_player.MixinEntityType",
     "fake_player.MixinPlayerEntity",
-    "fake_player.MixinServerWorld",
-    "fake_player.MixinTypeFilter"
+    "fake_player.MixinServerWorld"
   ],
   "injectors": {
     "defaultRequire": 1

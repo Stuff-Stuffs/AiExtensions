@@ -11,7 +11,6 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.WorldGenerationProgressListener;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.random.RandomSequencesState;
 import net.minecraft.util.profiler.Profiler;
@@ -21,9 +20,8 @@ import net.minecraft.world.dimension.DimensionOptions;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.level.ServerWorldProperties;
 import net.minecraft.world.level.storage.LevelStorage;
-import net.minecraft.world.spawner.Spawner;
+import net.minecraft.world.spawner.SpecialSpawner;
 import org.jetbrains.annotations.Nullable;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -50,12 +48,8 @@ public abstract class MixinServerWorld extends World implements AiWorldExtension
     @Shadow
     public abstract MinecraftServer getServer();
 
-    @Shadow
-    @Final
-    List<ServerPlayerEntity> players;
-
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void initHook(final MinecraftServer server, final Executor workerExecutor, final LevelStorage.Session session, final ServerWorldProperties properties, final RegistryKey<World> worldKey, final DimensionOptions dimensionOptions, final WorldGenerationProgressListener worldGenerationProgressListener, final boolean debugWorld, final long seed, final List<Spawner> spawners, final boolean shouldTickTime, final RandomSequencesState randomSequencesState, final CallbackInfo ci) {
+    private void initHook(final MinecraftServer server, final Executor workerExecutor, final LevelStorage.Session session, final ServerWorldProperties properties, final RegistryKey<World> worldKey, final DimensionOptions dimensionOptions, final WorldGenerationProgressListener worldGenerationProgressListener, final boolean debugWorld, final long seed, final List<SpecialSpawner> spawners, final boolean shouldTickTime, final RandomSequencesState randomSequencesState, final CallbackInfo ci) {
         aiex$aoiWorld = new AreaOfInterestWorldImpl(session.getWorldDirectory(worldKey), worldKey, getBottomY(), getHeight());
     }
 
@@ -75,7 +69,7 @@ public abstract class MixinServerWorld extends World implements AiWorldExtension
     }
 
     @Override
-    public void aiex$resyncAreaOfInterest(AreaOfInterestType<?> type) {
+    public void aiex$resyncAreaOfInterest(final AreaOfInterestType<?> type) {
         aiex$aoiWorld.resync((ServerWorld) (Object) this, type);
     }
 

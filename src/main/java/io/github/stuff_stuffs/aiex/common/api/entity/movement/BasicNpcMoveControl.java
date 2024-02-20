@@ -66,21 +66,21 @@ public class BasicNpcMoveControl implements NpcMoveControl {
     }
 
     protected void handleLast(final NpcMovementNode node) {
-        if (node instanceof NpcMovementNode.OpenDoor door) {
+        if (node instanceof final NpcMovementNode.OpenDoor door) {
             closeDoor(door);
         }
     }
 
     protected void handle(final NpcMovementNode node) {
-        if (node instanceof NpcMovementNode.Walk walk) {
+        if (node instanceof final NpcMovementNode.Walk walk) {
             walk(walk);
-        } else if (node instanceof NpcMovementNode.Jump jump) {
+        } else if (node instanceof final NpcMovementNode.Jump jump) {
             jump(jump);
-        } else if (node instanceof NpcMovementNode.Fall fall) {
+        } else if (node instanceof final NpcMovementNode.Fall fall) {
             fall(fall);
-        } else if (node instanceof NpcMovementNode.ClimbLadder ladder) {
+        } else if (node instanceof final NpcMovementNode.ClimbLadder ladder) {
             climbLadder(ladder);
-        } else if (node instanceof NpcMovementNode.OpenDoor door) {
+        } else if (node instanceof final NpcMovementNode.OpenDoor door) {
             openDoor(door);
         }
     }
@@ -154,7 +154,7 @@ public class BasicNpcMoveControl implements NpcMoveControl {
         if ((open ^ DoorUtil.canPassThroughDoor(state, direction)) && entity.aiex$getBrain().hasFakePlayerDelegate()) {
             final BlockHitResult target = DoorUtil.raycastDoor(state, world, pos, entity);
             if (target != null) {
-                final ActionResult result = state.onUse(world, entity.aiex$getBrain().fakePlayerDelegate(), Hand.MAIN_HAND, target);
+                final ActionResult result = state.onUse(world, entity.aiex$getBrain().fakePlayerDelegate(), target);
                 if (result.shouldSwingHand()) {
                     entity.swingHand(Hand.MAIN_HAND);
                 }

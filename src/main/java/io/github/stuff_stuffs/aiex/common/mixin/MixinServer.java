@@ -31,11 +31,9 @@ public class MixinServer implements InternalServerExtensions {
         return aiex$entityRefContainer;
     }
 
-    @Inject(method = "save", at = @At("RETURN"))
+    @Inject(method = "save", at = @At("HEAD"))
     private void saveHook(final boolean suppressLogs, final boolean flush, final boolean force, final CallbackInfoReturnable<Boolean> cir) {
-        if (cir.getReturnValueZ()) {
-            aiex$entityRefContainer.save(session);
-        }
+        aiex$entityRefContainer.save(session);
     }
 
     @Inject(method = "tick", at = @At("RETURN"))

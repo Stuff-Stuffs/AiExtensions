@@ -53,7 +53,7 @@ class AoiOctTreeNode {
 
     public <T extends AreaOfInterest> void forEachIntersecting(final AreaOfInterestBounds bounds, final Consumer<AreaOfInterestEntry<T>> consumer, final AreaOfInterestType<T> type) {
         for (final AreaOfInterestEntry<?> entry : entries.values()) {
-            if (entry.bounds().intersects(bounds) && type == entry.value().type()) {
+            if (entry.bounds().intersects(bounds) && type == entry.type()) {
                 //noinspection unchecked
                 consumer.accept((AreaOfInterestEntry<T>) entry);
             }

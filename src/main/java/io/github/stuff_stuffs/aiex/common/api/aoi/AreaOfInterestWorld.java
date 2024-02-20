@@ -10,7 +10,7 @@ public interface AreaOfInterestWorld {
 
     <T extends AreaOfInterest> Optional<AreaOfInterestEntry<T>> get(AreaOfInterestReference<T> ref);
 
-    <T extends AreaOfInterest> AreaOfInterestEntry<T> add(T value, AreaOfInterestBounds bounds);
+    <T extends AreaOfInterest> AreaOfInterestEntry<T> add(AreaOfInterestType<T> type, T value, AreaOfInterestBounds bounds);
 
     boolean updateBounds(AreaOfInterestReference<?> ref, AreaOfInterestBounds newBounds);
 

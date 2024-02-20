@@ -1,9 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.impl.aoi;
 
-import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterest;
-import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestBounds;
-import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestEntry;
-import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestReference;
+import io.github.stuff_stuffs.aiex.common.api.aoi.*;
 
 public class AreaOfInterestEntryImpl<T extends AreaOfInterest> implements AreaOfInterestEntry<T> {
     private final T value;
@@ -19,6 +16,11 @@ public class AreaOfInterestEntryImpl<T extends AreaOfInterest> implements AreaOf
     @Override
     public T value() {
         return value;
+    }
+
+    @Override
+    public AreaOfInterestType<T> type() {
+        return reference.type();
     }
 
     @Override

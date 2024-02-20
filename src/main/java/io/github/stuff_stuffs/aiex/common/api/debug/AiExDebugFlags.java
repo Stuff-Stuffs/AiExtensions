@@ -4,9 +4,11 @@ import io.github.stuff_stuffs.aiex.common.internal.AiExCommands;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import io.github.stuff_stuffs.aiex.common.internal.debug.PathDebugInfo;
 import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -24,31 +26,60 @@ public final class AiExDebugFlags {
         }
 
         @Override
-        public void writeToBuffer(final PathDebugInfo val, final PacketByteBuf buf, final ServerPlayerEntity player) {
+        public void writeToBuffer(final PathDebugInfo val, final RegistryByteBuf buf) {
             val.writeToBuffer(buf);
         }
 
         @Override
-        public void readAndApply(final PacketByteBuf buf) {
-            final PathDebugInfo info = PathDebugInfo.read(buf);
-            AiExCommands.CLIENT_PATH_DEBUG_APPLICATOR.accept(info);
+        public PathDebugInfo readFromBuffer(final RegistryByteBuf buf) {
+            return PathDebugInfo.read(buf);
+        }
+
+        @Override
+        public void apply(final PathDebugInfo message) {
+            AiExCommands.CLIENT_PATH_DEBUG_APPLICATOR.accept(message);
         }
     };
+    public static final CustomPayload.Id<DebugPayload<?>> DEBUG_PAYLOAD_ID = new CustomPayload.Id<>(AiExCommon.id("debug_payload"));
 
     public static <T> void send(final DebugFlag<T> flag, final T val, final ServerWorld world) {
-        final Identifier id = REGISTRY.getId(flag);
         for (final ServerPlayerEntity player : world.getPlayers()) {
             if (flag.shouldSendTo(player, val)) {
-                final PacketByteBuf buf = PacketByteBufs.create();
-                buf.writeIdentifier(id);
-                flag.writeToBuffer(val, buf, player);
-                ServerPlayNetworking.send(player, CHANNEL, buf);
+                ServerPlayNetworking.send(player, new DebugPayload<>(flag, val));
             }
         }
     }
 
     public static void init() {
         Registry.register(REGISTRY, AiExCommon.id("path"), PATH_FLAG);
+        PayloadTypeRegistry.playS2C().register(DEBUG_PAYLOAD_ID, new PacketCodec<>() {
+            @Override
+            public DebugPayload<?> decode(final RegistryByteBuf buf) {
+                final DebugFlag<?> flag = REGISTRY.get(buf.readIdentifier());
+                return decode0(buf, flag);
+            }
+
+            private <T> DebugPayload<T> decode0(final RegistryByteBuf buf, final DebugFlag<T> flag) {
+                return new DebugPayload<>(flag, flag.readFromBuffer(buf));
+            }
+
+            @Override
+            public void encode(final RegistryByteBuf buf, final DebugPayload<?> value) {
+                buf.writeIdentifier(REGISTRY.getId(value.flag));
+                encode0(buf, value);
+            }
+
+            private <T> void encode0(final RegistryByteBuf buf, final DebugPayload<T> payload) {
+                payload.flag.writeToBuffer(payload.value, buf);
+            }
+        });
+    }
+
+    public record DebugPayload<T>(DebugFlag<T> flag, T value) implements CustomPayload {
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return DEBUG_PAYLOAD_ID;
+        }
     }
 
 

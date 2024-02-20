@@ -69,7 +69,7 @@ public class AreaOfInterestSection {
                 }
 
                 //noinspection rawtypes,unchecked
-                final AreaOfInterestEntryImpl areaOfInterestEntry = new AreaOfInterestEntryImpl<>(result.get(), bounds.get(), new AreaOfInterestReferenceImpl(l, worldKey, result.get().type()));
+                final AreaOfInterestEntryImpl areaOfInterestEntry = new AreaOfInterestEntryImpl<>(result.get(), bounds.get(), new AreaOfInterestReferenceImpl(l, worldKey, type));
                 areas.put(l, areaOfInterestEntry);
                 tree.add(areaOfInterestEntry);
                 if (areaOfInterestEntry.value() instanceof TickingAreaOfInterest) {
@@ -98,7 +98,7 @@ public class AreaOfInterestSection {
 
     public <T extends AreaOfInterest> void forEach(final AreaOfInterestType<T> type, final Consumer<AreaOfInterestEntry<T>> consumer) {
         for (final AreaOfInterestEntry<?> entry : areas.values()) {
-            if (entry.value().type() == type) {
+            if (entry.type() == type) {
                 //noinspection unchecked
                 consumer.accept((AreaOfInterestEntry<T>) entry);
             }
@@ -119,11 +119,11 @@ public class AreaOfInterestSection {
         compound.putLong("version", VERSION);
         for (final Long2ObjectMap.Entry<AreaOfInterestEntry<?>> entry : areas.long2ObjectEntrySet()) {
             final NbtCompound sub = new NbtCompound();
-            sub.putString("type", AreaOfInterestType.REGISTRY.getId(entry.getValue().value().type()).toString());
+            sub.putString("type", AreaOfInterestType.REGISTRY.getId(entry.getValue().type()).toString());
             final Optional<NbtElement> encodedBounds = AreaOfInterestBounds.CODEC.encodeStart(NbtOps.INSTANCE, entry.getValue().bounds()).result();
             if (encodedBounds.isPresent()) {
                 sub.put("bounds", encodedBounds.get());
-                final Optional<NbtElement> encode = encode(entry.getValue().value().type(), entry.getValue().value());
+                final Optional<NbtElement> encode = encode(entry.getValue().type(), entry.getValue().value());
                 if (encode.isPresent()) {
                     sub.put("data", encode.get());
                     map.put(Long.toUnsignedString(entry.getLongKey(), 16), sub);

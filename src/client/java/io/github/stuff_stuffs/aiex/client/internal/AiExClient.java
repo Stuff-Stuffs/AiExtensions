@@ -2,9 +2,9 @@ package io.github.stuff_stuffs.aiex.client.internal;
 
 import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterest;
 import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestBounds;
+import io.github.stuff_stuffs.aiex.common.api.aoi.AreaOfInterestType;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.debug.AiExDebugFlags;
-import io.github.stuff_stuffs.aiex.common.api.debug.DebugFlag;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommands;
 import io.github.stuff_stuffs.aiex.common.internal.debug.AreaOfInterestDebugMessage;
 import io.github.stuff_stuffs.aiex.common.internal.debug.PathDebugInfo;
@@ -17,14 +17,12 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.util.Identifier;
@@ -37,26 +35,27 @@ public class AiExClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        ClientPlayNetworking.registerGlobalReceiver(AiExDebugFlags.CHANNEL, (client, handler, buf, responseSender) -> {
-            final Identifier id = buf.readIdentifier();
-            final DebugFlag<?> flag = AiExDebugFlags.REGISTRY.get(id);
-            if (flag == null) {
-                return;
+        ClientPlayNetworking.registerGlobalReceiver(AiExDebugFlags.DEBUG_PAYLOAD_ID, new ClientPlayNetworking.PlayPayloadHandler<>() {
+            @Override
+            public void receive(final AiExDebugFlags.DebugPayload<?> payload, final ClientPlayNetworking.Context context) {
+                receive0(payload);
             }
-            final PacketByteBuf copy = PacketByteBufs.copy(buf);
-            client.execute(() -> flag.readAndApply(copy));
+
+            private <T> void receive0(final AiExDebugFlags.DebugPayload<T> payload) {
+                payload.flag().apply(payload.value());
+            }
         });
         AiExCommands.CLIENT_PATH_DEBUG_APPLICATOR = info -> {
             final MinecraftClient client = MinecraftClient.getInstance();
             TIME_OUTS.put(info.entityId, new Entry(client.world.getTime() + AiBrainEvent.MINUTE * 3, info));
         };
         AiExCommands.CLIENT_AOI_DEBUG_APPLICATOR = message -> {
-            if (message instanceof AreaOfInterestDebugMessage.Add<?> add) {
-                AOI_CACHE.put(add.id(), new AoiEntry(add.value(), add.bounds()));
-            } else if (message instanceof AreaOfInterestDebugMessage.Remove remove) {
+            if (message instanceof final AreaOfInterestDebugMessage.Add<?> add) {
+                AOI_CACHE.put(add.id(), new AoiEntry(add.type(), add.value(), add.bounds()));
+            } else if (message instanceof final AreaOfInterestDebugMessage.Remove remove) {
                 AOI_CACHE.remove(remove.id());
-            } else if (message instanceof AreaOfInterestDebugMessage.Clear clear) {
-                AOI_CACHE.values().removeIf(entry -> entry.value.type() == clear.type());
+            } else if (message instanceof final AreaOfInterestDebugMessage.Clear clear) {
+                AOI_CACHE.values().removeIf(entry -> entry.type() == clear.type());
             }
         };
         WorldRenderEvents.AFTER_ENTITIES.register(context -> {
@@ -101,7 +100,7 @@ public class AiExClient implements ClientModInitializer {
         });
     }
 
-    private record AoiEntry(AreaOfInterest value, AreaOfInterestBounds bounds) {
+    private record AoiEntry(AreaOfInterestType<?> type, AreaOfInterest value, AreaOfInterestBounds bounds) {
     }
 
     private record Entry(long timeout, PathDebugInfo pathDebugInfo) {

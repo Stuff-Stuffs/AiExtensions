@@ -9,7 +9,6 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 public class DummyGoalSelector extends GoalSelector {
     public DummyGoalSelector(final Supplier<Profiler> profiler) {
@@ -39,15 +38,6 @@ public class DummyGoalSelector extends GoalSelector {
     @Override
     public Set<PrioritizedGoal> getGoals() {
         return Collections.emptySet();
-    }
-
-    @Override
-    public Stream<PrioritizedGoal> getRunningGoals() {
-        return Stream.empty();
-    }
-
-    @Override
-    public void setTimeInterval(final int timeInterval) {
     }
 
     @Override

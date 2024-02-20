@@ -33,11 +33,6 @@ public class BasicAreaOfInterest implements AreaOfInterest, TickingAreaOfInteres
     }
 
     @Override
-    public AreaOfInterestType<?> type() {
-        return AiExTestCommon.BASIC_AOI_TYPE;
-    }
-
-    @Override
     public void setRef(final AreaOfInterestReference<?> thisRef) {
         ref = thisRef;
     }

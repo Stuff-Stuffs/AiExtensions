@@ -4,6 +4,7 @@ import com.mojang.datafixers.util.Either;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtSizeTracker;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.Unit;
 import net.minecraft.util.Util;
@@ -50,7 +51,7 @@ public class AoiStorageIoWorker implements AutoCloseable {
                 if (!Files.isDirectory(parent)) {
                     Files.createDirectories(parent);
                 }
-                NbtIo.writeCompressed(write, filename.toFile());
+                NbtIo.writeCompressed(write, filename);
                 listener.send(Either.left(null));
             } catch (final Exception e) {
                 AiExCommon.LOGGER.error("Error while saving aoi!", e);
@@ -69,7 +70,7 @@ public class AoiStorageIoWorker implements AutoCloseable {
                     Files.createDirectories(parent);
                 }
                 if (write != null) {
-                    NbtIo.writeCompressed(write, filename.toFile());
+                    NbtIo.writeCompressed(write, filename);
                 } else {
                     Files.deleteIfExists(filename);
                 }
@@ -91,7 +92,7 @@ public class AoiStorageIoWorker implements AutoCloseable {
                     Files.createDirectories(parent);
                 }
                 if (write != null) {
-                    NbtIo.writeCompressed(write, filename.toFile());
+                    NbtIo.writeCompressed(write, filename);
                 } else {
                     Files.deleteIfExists(filename);
                 }
@@ -109,7 +110,7 @@ public class AoiStorageIoWorker implements AutoCloseable {
             final boolean exists = Files.isRegularFile(filename);
             if (exists) {
                 try {
-                    final NbtCompound compound = NbtIo.readCompressed(filename.toFile());
+                    final NbtCompound compound = NbtIo.readCompressed(filename, NbtSizeTracker.ofUnlimitedBytes());
                     listener.send(Either.left(Optional.of(compound)));
                 } catch (final FileNotFoundException e) {
                     listener.send(Either.left(Optional.empty()));
@@ -129,7 +130,7 @@ public class AoiStorageIoWorker implements AutoCloseable {
             final boolean exists = Files.isRegularFile(filename);
             if (exists) {
                 try {
-                    final NbtCompound compound = NbtIo.readCompressed(filename.toFile());
+                    final NbtCompound compound = NbtIo.readCompressed(filename, NbtSizeTracker.ofUnlimitedBytes());
                     listener.send(Either.left(Optional.of(compound)));
                 } catch (final FileNotFoundException e) {
                     listener.send(Either.left(Optional.empty()));
@@ -149,7 +150,7 @@ public class AoiStorageIoWorker implements AutoCloseable {
             final boolean exists = Files.isRegularFile(filename);
             if (exists) {
                 try {
-                    final NbtCompound compound = NbtIo.readCompressed(filename.toFile());
+                    final NbtCompound compound = NbtIo.readCompressed(filename, NbtSizeTracker.ofUnlimitedBytes());
                     listener.send(Either.left(Optional.of(compound)));
                 } catch (final FileNotFoundException e) {
                     listener.send(Either.left(Optional.empty()));
