@@ -1,7 +1,7 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.node.flow;
+package io.github.stuff_stuffs.aiex.common.api.brain.task.node.flow;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.ArrayList;

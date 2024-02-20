@@ -9,6 +9,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -33,7 +34,7 @@ public final class FakePlayerAsm {
                 final Class<?> clazz = create(entityClass);
 
                 try {
-                    final MethodHandle handle = MethodHandles.lookup().unreflectConstructor(clazz.getConstructor(ServerWorld.class, entityClass));
+                    final MethodHandle handle = MethodHandles.lookup().findConstructor(clazz, MethodType.methodType(void.class, ServerWorld.class, entityClass));
                     final BiFunction<ServerWorld, Entity, AiFakePlayer> function = new BiFunction<>() {
                         @Override
                         public AiFakePlayer apply(final ServerWorld world, final Entity entity) {

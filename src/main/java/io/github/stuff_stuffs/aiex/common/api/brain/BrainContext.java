@@ -1,6 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain;
 
-import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
 import io.github.stuff_stuffs.aiex.common.api.entity.AiFakePlayer;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;

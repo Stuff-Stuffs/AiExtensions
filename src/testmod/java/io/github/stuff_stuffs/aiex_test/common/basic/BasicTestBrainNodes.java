@@ -1,8 +1,8 @@
 package io.github.stuff_stuffs.aiex_test.common.basic;
 
 import com.mojang.datafixers.util.Unit;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.node.BrainNodes;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Vec3d;

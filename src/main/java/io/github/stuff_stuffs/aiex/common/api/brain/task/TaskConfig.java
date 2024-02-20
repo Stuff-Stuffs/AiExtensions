@@ -1,6 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.task;
 
-import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.impl.brain.task.TaskConfigImpl;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommon;
 import net.fabricmc.fabric.api.event.Event;

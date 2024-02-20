@@ -54,7 +54,7 @@ public class AiFakePlayer extends FakePlayer implements EntityReferencable {
     }
 
     private static GameProfile createProfile(final Entity entity) {
-        return new GameProfile(null, entity.getUuid() + "'s delegate");
+        return new GameProfile(entity.getUuid(), entity.getUuid() + "'s delegate");
     }
 
     @Retention(RetentionPolicy.RUNTIME)

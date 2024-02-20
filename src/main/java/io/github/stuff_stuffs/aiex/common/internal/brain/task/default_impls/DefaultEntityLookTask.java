@@ -1,9 +1,9 @@
 package io.github.stuff_stuffs.aiex.common.internal.brain.task.default_impls;
 
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNodes;
-import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.node.BrainNodes;
+import io.github.stuff_stuffs.aiex.common.api.brain.task.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;

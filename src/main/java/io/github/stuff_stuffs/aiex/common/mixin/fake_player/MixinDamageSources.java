@@ -24,25 +24,12 @@ public class MixinDamageSources {
 
     @Inject(method = "create(Lnet/minecraft/registry/RegistryKey;Lnet/minecraft/entity/Entity;)Lnet/minecraft/entity/damage/DamageSource;", at = @At("HEAD"), cancellable = true)
     private void createHook(RegistryKey<DamageType> key, @Nullable Entity attacker, final CallbackInfoReturnable<DamageSource> cir) {
-        if (attacker instanceof AiFakePlayer fake) {
+        if (attacker instanceof final AiFakePlayer fake) {
             attacker = fake.getDelegate();
             if (key == DamageTypes.PLAYER_ATTACK) {
                 key = DamageTypes.MOB_ATTACK;
             }
             cir.setReturnValue(new DamageSource(registry.entryOf(key), attacker));
-        }
-    }
-
-    @Inject(method = "create(Lnet/minecraft/registry/RegistryKey;Lnet/minecraft/entity/Entity;Lnet/minecraft/entity/Entity;)Lnet/minecraft/entity/damage/DamageSource;", at = @At("HEAD"), cancellable = true)
-    private void createHook(final RegistryKey<DamageType> key, @Nullable Entity attacker, @Nullable Entity source, final CallbackInfoReturnable<DamageSource> cir) {
-        if (attacker instanceof AiFakePlayer || source instanceof AiFakePlayer) {
-            if (attacker instanceof AiFakePlayer fake) {
-                attacker = fake.getDelegate();
-            }
-            if (source instanceof AiFakePlayer fake) {
-                source = fake.getDelegate();
-            }
-            cir.setReturnValue(new DamageSource(registry.entryOf(key), attacker, source));
         }
     }
 }
