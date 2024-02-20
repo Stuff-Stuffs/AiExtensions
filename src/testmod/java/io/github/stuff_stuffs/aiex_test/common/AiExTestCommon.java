@@ -34,7 +34,7 @@ public class AiExTestCommon implements ModInitializer {
                 final int x = pos.getX();
                 final int y = pos.getY();
                 final int z = pos.getZ();
-                extensions.aiex$getAoiWorld().add(new BasicAreaOfInterest(pos, Optional.empty(), world.getTime()), new AreaOfInterestBounds(x, y + 1, z, x + 1, y + 2, z + 1));
+                extensions.aiex$getAoiWorld().add(BASIC_AOI_TYPE, new BasicAreaOfInterest(pos, Optional.empty(), world.getTime()), new AreaOfInterestBounds(x, y + 1, z, x + 1, y + 2, z + 1));
             }
         }
 

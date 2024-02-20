@@ -8,6 +8,7 @@ import io.github.stuff_stuffs.aiex.common.api.debug.DebugFlag;
 import io.github.stuff_stuffs.aiex.common.impl.aoi.AreaOfInterestReferenceImpl;
 import io.github.stuff_stuffs.aiex.common.internal.AiExCommands;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 public sealed interface AreaOfInterestDebugMessage {
@@ -15,47 +16,53 @@ public sealed interface AreaOfInterestDebugMessage {
         @Override
         public boolean shouldSendTo(final ServerPlayerEntity entity, final AreaOfInterestDebugMessage val) {
             final AreaOfInterestType<?> type = AiExCommands.AOI_WATCHING.get(entity.getUuid());
-            if (val instanceof Clear clear) {
+            if (val instanceof final Clear clear) {
                 return true;
             }
-            if (val instanceof Remove remove && remove.type == type) {
+            if (val instanceof final Remove remove && remove.type == type) {
                 return true;
             }
-            if (val instanceof Add<?> add && add.type == type) {
+            if (val instanceof final Add<?> add && add.type == type) {
                 return true;
             }
             return false;
         }
 
         @Override
-        public void writeToBuffer(final AreaOfInterestDebugMessage val, final PacketByteBuf buf, final ServerPlayerEntity player) {
-            if (val instanceof Add<?> add) {
+        public void writeToBuffer(final AreaOfInterestDebugMessage val, final RegistryByteBuf buf) {
+            if (val instanceof final Add<?> add) {
                 buf.writeInt(0);
                 add.writeToBuffer(buf);
-            } else if (val instanceof Remove remove) {
+            } else if (val instanceof final Remove remove) {
                 buf.writeInt(1);
-                buf.writeRegistryValue(AreaOfInterestType.REGISTRY, remove.type);
+                buf.writeVarInt(AreaOfInterestType.REGISTRY.getRawId(remove.type));
                 buf.writeLong(remove.id);
-            } else if (val instanceof Clear clear) {
+            } else if (val instanceof final Clear clear) {
                 buf.writeInt(2);
-                buf.writeRegistryValue(AreaOfInterestType.REGISTRY, clear.type);
+                buf.writeVarInt(AreaOfInterestType.REGISTRY.getRawId(clear.type));
             }
         }
 
         @Override
-        public void readAndApply(final PacketByteBuf buf) {
+        public AreaOfInterestDebugMessage readFromBuffer(final RegistryByteBuf buf) {
             final int messageType = buf.readInt();
             if (messageType == 0) {
-                final AreaOfInterestType<?> type = buf.readRegistryValue(AreaOfInterestType.REGISTRY);
-                AiExCommands.CLIENT_AOI_DEBUG_APPLICATOR.accept(read(buf, type));
+                final AreaOfInterestType<?> type = AreaOfInterestType.REGISTRY.getOrThrow(buf.readVarInt());
+                return read(buf, type);
             } else if (messageType == 1) {
-                final AreaOfInterestType<?> type = buf.readRegistryValue(AreaOfInterestType.REGISTRY);
+                final AreaOfInterestType<?> type = AreaOfInterestType.REGISTRY.getOrThrow(buf.readVarInt());
                 final long id = buf.readLong();
-                AiExCommands.CLIENT_AOI_DEBUG_APPLICATOR.accept(new Remove(type, id));
+                return new Remove(type, id);
             } else if (messageType == 2) {
-                final AreaOfInterestType<?> type = buf.readRegistryValue(AreaOfInterestType.REGISTRY);
-                AiExCommands.CLIENT_AOI_DEBUG_APPLICATOR.accept(new Clear(type));
+                final AreaOfInterestType<?> type = AreaOfInterestType.REGISTRY.getOrThrow(buf.readVarInt());
+                return new Clear(type);
             }
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void apply(final AreaOfInterestDebugMessage message) {
+            AiExCommands.CLIENT_AOI_DEBUG_APPLICATOR.accept(message);
         }
 
         private static <T extends AreaOfInterest> Add<T> read(final PacketByteBuf buf, final AreaOfInterestType<T> type) {
@@ -69,15 +76,14 @@ public sealed interface AreaOfInterestDebugMessage {
     record Add<T extends AreaOfInterest>(AreaOfInterestType<T> type, T value, AreaOfInterestBounds bounds,
                                          long id) implements AreaOfInterestDebugMessage {
         public void writeToBuffer(final PacketByteBuf buf) {
-            buf.writeRegistryValue(AreaOfInterestType.REGISTRY, type);
+            buf.writeVarInt(AreaOfInterestType.REGISTRY.getRawId(type));
             buf.encodeAsJson(type.codec(), value);
             buf.encodeAsJson(AreaOfInterestBounds.CODEC, bounds);
             buf.writeLong(id);
         }
 
         public static <T extends AreaOfInterest> Add<T> from(final AreaOfInterestEntry<T> entry) {
-            //noinspection unchecked
-            return new Add<>((AreaOfInterestType<T>) entry.value().type(), entry.value(), entry.bounds(), ((AreaOfInterestReferenceImpl<T>) entry.reference()).id());
+            return new Add<>(entry.type(), entry.value(), entry.bounds(), ((AreaOfInterestReferenceImpl<T>) entry.reference()).id());
         }
     }
 

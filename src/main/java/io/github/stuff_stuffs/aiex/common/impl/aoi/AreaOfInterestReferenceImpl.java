@@ -12,7 +12,7 @@ import net.minecraft.world.World;
 public class AreaOfInterestReferenceImpl<T extends AreaOfInterest> implements AreaOfInterestReference<T> {
     public static final Codec<AreaOfInterestReferenceImpl<?>> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.LONG.fieldOf("id").forGetter(AreaOfInterestReferenceImpl::id),
-            RegistryKey.createCodec(RegistryKeys.WORLD).fieldOf("world").forGetter(AreaOfInterestReferenceImpl::world),
+            RegistryKey.createCodec(RegistryKeys.WORLD).fieldOf("world").forGetter(AreaOfInterestReferenceImpl::source),
             AreaOfInterestType.REGISTRY.getCodec().fieldOf("type").forGetter(AreaOfInterestReferenceImpl::type)
     ).apply(instance, AreaOfInterestReferenceImpl::new));
     private final long id;
@@ -34,7 +34,8 @@ public class AreaOfInterestReferenceImpl<T extends AreaOfInterest> implements Ar
         return id;
     }
 
-    public RegistryKey<World> world() {
+    @Override
+    public RegistryKey<World> source() {
         return world;
     }
 }

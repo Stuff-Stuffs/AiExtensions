@@ -25,7 +25,7 @@ public class DelegatingPlayerInventory extends PlayerInventory {
 
     private boolean canStackAddMore(final ItemStack existingStack, final ItemStack stack) {
         return !existingStack.isEmpty()
-                && ItemStack.canCombine(existingStack, stack)
+                && ItemStack.areItemsAndNbtEqual(existingStack, stack)
                 && existingStack.isStackable()
                 && existingStack.getCount() < existingStack.getMaxCount()
                 && existingStack.getCount() < getMaxCountPerStack();
@@ -88,7 +88,7 @@ public class DelegatingPlayerInventory extends PlayerInventory {
     public int getSlotWithStack(final ItemStack stack) {
         final int count = delegate.main().getSlotCount();
         for (int i = 0; i < count; ++i) {
-            if (!delegate.main().getSlot(i).getResource().isBlank() && ItemStack.canCombine(stack, getStack(i))) {
+            if (!delegate.main().getSlot(i).getResource().isBlank() && ItemStack.areItemsAndNbtEqual(stack, getStack(i))) {
                 return i;
             }
         }
@@ -202,7 +202,7 @@ public class DelegatingPlayerInventory extends PlayerInventory {
         final int size = size();
         for (int i = 0; i < size; i++) {
             final ItemStack itemStack = getStack(i);
-            if (!itemStack.isEmpty() && ItemStack.canCombine(itemStack, stack)) {
+            if (!itemStack.isEmpty() && ItemStack.areItemsAndNbtEqual(itemStack, stack)) {
                 return true;
             }
         }
@@ -225,7 +225,7 @@ public class DelegatingPlayerInventory extends PlayerInventory {
         final int count = delegate.main().getSlotCount();
         for (int i = 0; i < count; ++i) {
             final ItemStack itemStack = getStack(i);
-            if (!itemStack.isEmpty() && ItemStack.canCombine(stack, itemStack) && !itemStack.isDamaged() && !itemStack.hasEnchantments() && !itemStack.hasCustomName()) {
+            if (!itemStack.isEmpty() && ItemStack.areItemsAndNbtEqual(stack, itemStack) && !itemStack.isDamaged() && !itemStack.hasEnchantments() && !itemStack.hasCustomName()) {
                 return i;
             }
         }

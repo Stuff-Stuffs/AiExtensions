@@ -44,10 +44,7 @@ import net.minecraft.util.Arm;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.BiFunction;
 
 public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
@@ -175,9 +172,14 @@ public class TestEntity extends AbstractNpcEntity implements PathingNpcEntity {
     }
 
     @Override
-    protected void initDataTracker() {
-        super.initDataTracker();
-        dataTracker.startTracking(SLIM_DATA, false);
+    protected void initDataTracker(final DataTracker.Builder builder) {
+        super.initDataTracker(builder);
+        builder.add(SLIM_DATA, false);
+    }
+
+    @Override
+    public void onDataTrackerUpdate(final List<DataTracker.SerializedEntry<?>> entries) {
+        super.onDataTrackerUpdate(entries);
     }
 
     @Override

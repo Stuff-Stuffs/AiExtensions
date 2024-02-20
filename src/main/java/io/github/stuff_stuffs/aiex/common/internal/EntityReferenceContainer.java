@@ -9,6 +9,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtSizeTracker;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -65,7 +66,7 @@ public class EntityReferenceContainer {
         map.clear();
         final Path directory = session.getDirectory(AiExCommon.ENTITY_REFERENCE_SAVE_PATH);
         try {
-            final NbtCompound compound = NbtIo.readCompressed(directory.toFile());
+            final NbtCompound compound = NbtIo.readCompressed(directory, NbtSizeTracker.ofUnlimitedBytes());
             for (final String key : compound.getKeys()) {
                 final UUID uuid = UUID.fromString(key);
                 final Optional<EntityReferenceImpl> result = EntityReferenceImpl.decode(uuid, compound.getCompound(key));
@@ -90,7 +91,7 @@ public class EntityReferenceContainer {
             }
         }
         try {
-            NbtIo.writeCompressed(root, directory.toFile());
+            NbtIo.writeCompressed(root, directory);
         } catch (final IOException e) {
             AiExCommon.LOGGER.error("Exception while saving entity references! ", e);
         }
