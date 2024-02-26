@@ -1,10 +1,10 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task.node;
+package io.github.stuff_stuffs.aiex.common.api.brain.node;
 
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.node.flow.ForwardingBrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.node.flow.IfBrainNode;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.node.flow.TaskBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.ForwardingBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.IfBrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.TaskBrainNode;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 
 import java.util.Optional;

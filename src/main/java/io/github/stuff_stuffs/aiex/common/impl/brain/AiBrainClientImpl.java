@@ -1,6 +1,8 @@
 package io.github.stuff_stuffs.aiex.common.impl.brain;
 
+import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrain;
+import io.github.stuff_stuffs.aiex.common.api.brain.behavior.Behavior;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventType;
@@ -32,8 +34,9 @@ public class AiBrainClientImpl implements AiBrain {
     }
 
     @Override
-    public void tick() {
+    public boolean tick() {
         age++;
+        return false;
     }
 
     @Override
@@ -48,6 +51,11 @@ public class AiBrainClientImpl implements AiBrain {
 
     @Override
     public void readNbt(final NbtCompound nbt) {
+
+    }
+
+    @Override
+    public void submit(final Behavior<Unit, Boolean> behavior) {
 
     }
 

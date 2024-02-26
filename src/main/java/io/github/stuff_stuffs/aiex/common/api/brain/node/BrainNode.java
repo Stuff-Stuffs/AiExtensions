@@ -1,7 +1,8 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task.node;
+package io.github.stuff_stuffs.aiex.common.api.brain.node;
 
 import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.flow.*;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.node.flow.*;
 import io.github.stuff_stuffs.aiex.common.api.util.SpannedLogger;
 

@@ -9,7 +9,6 @@ import net.minecraft.entity.EquipmentSlot;
 
 import java.util.Optional;
 
-@SuppressWarnings("UnstableApiUsage")
 public class InventorySlot {
     private final Either<EquipmentSlot, Integer> internal;
 

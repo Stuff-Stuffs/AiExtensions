@@ -1,5 +1,6 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.behavior;
 
+import io.github.stuff_stuffs.aiex.common.impl.brain.behavior.BehaviorHandlerMapImpl;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
 import net.minecraft.entity.EntityType;
@@ -13,13 +14,17 @@ public interface BehaviorHandlerMap {
         }
     });
 
-    <T extends Behavior> List<BehaviorHandler<T>> get(BehaviorType<T> type);
+    <A, R, T extends Behavior.Compound<A, R>> List<BehaviorHandler<A, R, T>> get(BehaviorType<A, R, T> type);
 
     interface Populate {
         void populate(EntityType<?> type, PopulateHelper helper);
     }
 
     interface PopulateHelper {
-        <T extends Behavior> void accept(BehaviorType<T> type, BehaviorHandler<T> handler);
+        <A, R, T extends Behavior.Compound<A, R>> void accept(BehaviorType<A, R, T> type, BehaviorHandler<A, R, T> handler);
+    }
+
+    static BehaviorHandlerMap create(final EntityType<?> type) {
+        return new BehaviorHandlerMapImpl(type);
     }
 }

@@ -4,10 +4,12 @@ import com.mojang.datafixers.util.Unit;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrain;
 import io.github.stuff_stuffs.aiex.common.api.brain.AiBrainView;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
+import io.github.stuff_stuffs.aiex.common.api.brain.behavior.Behavior;
+import io.github.stuff_stuffs.aiex.common.api.brain.behavior.BehaviorDecider;
 import io.github.stuff_stuffs.aiex.common.api.brain.config.BrainConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEvent;
 import io.github.stuff_stuffs.aiex.common.api.brain.event.AiBrainEventType;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResources;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskConfig;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.TaskKey;
@@ -36,7 +38,7 @@ import java.util.stream.Stream;
 public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Events {
     private static final StringTemplate MISSING_FACTORY_TEMPLATE = StringTemplate.create("Missing task factory for task {}!");
     private final T entity;
-    private final BrainNode<T, Unit, Unit> rootNode;
+    private final BehaviorDecider<T> decider;
     private final BrainConfig config;
     private final EventHandler handler;
     private final MemoriesImpl memories;
@@ -48,9 +50,9 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
     private long age;
     private boolean init = false;
 
-    public AiBrainImpl(final T entity, final BrainNode<T, Unit, Unit> node, final BrainConfig config, final TaskConfig<T> taskConfig, final long seed, final SpannedLogger logger) {
+    public AiBrainImpl(final T entity, final BehaviorDecider<T> decider, final BrainConfig config, final TaskConfig<T> taskConfig, final long seed, final SpannedLogger logger) {
         this.entity = entity;
-        rootNode = node;
+        this.decider = decider;
         this.config = config;
         this.seed = seed;
         this.logger = logger;
@@ -155,31 +157,25 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
     }
 
     @Override
-    public void tick() {
+    public boolean tick() {
         if (!(entity.getEntityWorld() instanceof ServerWorld)) {
             throw new IllegalStateException("Tried ticking Ai on client!");
         }
         age++;
         handler.tick(age);
         final BrainContext<T> context = createContext();
+        final boolean tick;
         try (final SpannedLogger child = logger.open("root")) {
-            if (!init) {
-                rootNode.init(context, child);
-                init = true;
-            }
-            rootNode.tick(context, Unit.INSTANCE, child);
+            tick = decider.tick(context, child);
         }
         memories.tick(context);
+        return tick;
     }
 
     @Override
     public void unload() {
         if (init) {
-            final BrainContext<T> context = createContext();
             init = false;
-            try (final SpannedLogger child = logger.open("root")) {
-                rootNode.deinit(context, child);
-            }
         }
     }
 
@@ -205,9 +201,6 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
     @Override
     public void readNbt(final NbtCompound nbt) {
         if (init) {
-            try (final SpannedLogger child = logger.open("root")) {
-                rootNode.deinit(createContext(), child);
-            }
             logger.debug("Reloading brain!");
             init = false;
         }
@@ -224,6 +217,12 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             }
         }
         memories.readNbt(nbt.getCompound("memories"));
+    }
+
+    @Override
+    public void submit(final Behavior<Unit, Boolean> behavior) {
+        final BrainContext<T> context = createContext();
+        decider.submit(behavior, context);
     }
 
     @Override
@@ -295,7 +294,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             submit(entry);
         }
 
-        public void submit(final EventEntry entry) {
+        private void submit(final EventEntry entry) {
             expirationQueue.enqueue(entry);
 
             int index = Collections.binarySearch(allEvents, entry, EventEntry.TIMESTAMP_COMPARATOR);
@@ -350,7 +349,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             }
         }
 
-        public List<EventEntry> query(final long since) {
+        private List<EventEntry> query(final long since) {
             if (allEvents.isEmpty()) {
                 return Collections.emptyList();
             }
@@ -362,7 +361,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             return allEvents.subList(index, allEvents.size());
         }
 
-        public List<EventEntry> query(final AiBrainEventType<?> type, final long since) {
+        private List<EventEntry> query(final AiBrainEventType<?> type, final long since) {
             final List<EventEntry> entries = eventsByType.get(type);
             if (entries == null || entries.isEmpty()) {
                 return Collections.emptyList();
@@ -375,7 +374,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             return entries.subList(index, entries.size());
         }
 
-        public List<EventEntry> queryReversed(final long since) {
+        private List<EventEntry> queryReversed(final long since) {
             if (allEventsReversed.isEmpty()) {
                 return Collections.emptyList();
             }
@@ -387,7 +386,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             return allEventsReversed.subList(0, index);
         }
 
-        public List<EventEntry> queryReversed(final AiBrainEventType<?> type, final long since) {
+        private List<EventEntry> queryReversed(final AiBrainEventType<?> type, final long since) {
             final List<EventEntry> entries = eventsByTypeReversed.get(type);
             if (entries == null || entries.isEmpty()) {
                 return Collections.emptyList();
@@ -428,7 +427,7 @@ public class AiBrainImpl<T extends Entity> implements AiBrain, AiBrainView.Event
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof EventEntry entry)) {
+            if (!(o instanceof final EventEntry entry)) {
                 return false;
             }
             if (event == entry.event()) {

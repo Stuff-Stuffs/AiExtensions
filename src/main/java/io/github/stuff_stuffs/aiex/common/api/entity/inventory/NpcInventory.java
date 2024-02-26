@@ -6,7 +6,6 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 
-@SuppressWarnings("UnstableApiUsage")
 public interface NpcInventory {
     SlottedStorage<ItemVariant> main();
 

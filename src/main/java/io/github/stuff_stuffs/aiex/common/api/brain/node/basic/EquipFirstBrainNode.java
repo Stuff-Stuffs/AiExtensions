@@ -1,8 +1,8 @@
-package io.github.stuff_stuffs.aiex.common.api.brain.task.node.basic;
+package io.github.stuff_stuffs.aiex.common.api.brain.node.basic;
 
 import io.github.stuff_stuffs.aiex.common.api.AiExApi;
 import io.github.stuff_stuffs.aiex.common.api.brain.BrainContext;
-import io.github.stuff_stuffs.aiex.common.api.brain.task.node.BrainNode;
+import io.github.stuff_stuffs.aiex.common.api.brain.node.BrainNode;
 import io.github.stuff_stuffs.aiex.common.api.brain.resource.BrainResourceRepository;
 import io.github.stuff_stuffs.aiex.common.api.brain.task.BasicTasks;
 import io.github.stuff_stuffs.aiex.common.api.entity.inventory.NpcInventory;

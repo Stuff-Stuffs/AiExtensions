@@ -1,12 +1,33 @@
 package io.github.stuff_stuffs.aiex.common.api.brain.behavior;
 
-import net.minecraft.entity.Entity;
+public interface BehaviorHandler<A, R, T extends Behavior.Compound<A, R>> {
+    BehaviorList<A, R> handle(T behaviour);
 
-import java.util.List;
+    PenaltyInfo penaltyInfo();
 
-public interface BehaviorHandler<T extends Behavior> {
-    <E extends Entity> List<WeightedBehavior> handle(T behaviour, BehaviorState<E> state);
+    record PenaltyInfo(String id, double scale, double timeScale) {
+    }
 
-    record WeightedBehavior(Behavior behavior, double weight) {
+    interface BehaviorList<A, R> {
+        Node<A, ?> first();
+
+
+        Node<?, R> last();
+
+        int size();
+
+        interface Node<A, R> {
+            boolean first();
+
+            boolean last();
+
+            int index();
+
+            Behavior<A, R> behavior();
+
+            Behavior<?, A> prev();
+
+            Behavior<R, ?> next();
+        }
     }
 }
